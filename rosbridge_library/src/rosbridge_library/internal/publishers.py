@@ -33,7 +33,7 @@
 
 from time import time
 from copy import copy
-from threading import Lock, Timer
+from threading import Lock
 from rospy import Publisher, SubscribeListener
 from rospy import logwarn
 from rostopic import get_topic_type
@@ -253,7 +253,6 @@ class PublisherManager():
 
     def __init__(self):
         self._publishers = {}
-        self.unregister_timers = {}
         self.unregister_timeout = 10.0
 
     def register(self, client_id, topic, msg_type=None, latch=False, queue_size=100):
@@ -281,13 +280,12 @@ class PublisherManager():
              queue_size=queue_size)
         elif latch and self._publishers[topic].latched_client_id != client_id:
             logwarn("Client ID %s attempted to register topic [%s] as latched " +
-                    "but this topic was previously registered." % (client_id, topic))
+                    "but this topic was previously registered.", client_id, topic)
             logwarn("Only a single registered latched publisher is supported at the time")
         elif not latch and self._publishers[topic].latched_client_id:
             logwarn("New non-latched publisher registration for topic [%s] which is " +
                     "already registered as latched. but this topic was previously " +
-                    "registered." % topic)
-            logwarn("Only a single registered latched publisher is supported at the time")
+                    "registered.", topic)
 
         if msg_type is not None:
             self._publishers[topic].verify_type(msg_type)
@@ -311,18 +309,9 @@ class PublisherManager():
             return
 
         self._publishers[topic].unregister_client(client_id)
-        if topic in self.unregister_timers:
-            self.unregister_timers[topic].cancel()
-            del self.unregister_timers[topic]
-        self.unregister_timers[topic] = Timer(self.unregister_timeout, self._unregister_impl,
-                                              [topic])
-        self.unregister_timers[topic].start()
 
-    def _unregister_impl(self, topic):
-        if not self._publishers[topic].has_clients():
-            self._publishers[topic].unregister()
+        if not self._publishers[topic].has_clients() or self._publishers[topic].latched_client_id:
             del self._publishers[topic]
-        del self.unregister_timers[topic]
 
     def unregister_all(self, client_id):
         """ Unregisters a client from all publishers that they are registered
