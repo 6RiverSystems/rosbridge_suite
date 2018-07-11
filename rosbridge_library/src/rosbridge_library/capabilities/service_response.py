@@ -19,7 +19,7 @@ class ServiceResponse(Capability):
 
     def service_response(self, message):
         # Typecheck the args
-        self.basic_type_check(message, self.service_response_msg_fields)
+        #self.basic_type_check(message, self.service_response_msg_fields)
 
         # check for the service
         service_name = message["service"]
