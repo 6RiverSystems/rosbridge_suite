@@ -151,8 +151,7 @@ class TestROSLoader(unittest.TestCase):
         common = ["roscpp/GetLoggers", "roscpp/SetLoggerLevel",
         "std_srvs/Empty", "nav_msgs/GetMap", "nav_msgs/GetPlan",
         "sensor_msgs/SetCameraInfo", "topic_tools/MuxAdd",
-        "topic_tools/MuxSelect", "tf2_msgs/FrameGraph",
-        "rospy_tutorials/BadTwoInts", "rospy_tutorials/AddTwoInts"]
+        "topic_tools/MuxSelect", "tf2_msgs/FrameGraph"]
         for x in common:
             self.assertNotEqual(ros_loader.get_service_class(x), None)
             self.assertNotEqual(ros_loader.get_service_instance(x), None)
@@ -164,8 +163,7 @@ class TestROSLoader(unittest.TestCase):
         common = ["roscpp/GetLoggers", "roscpp/SetLoggerLevel",
         "std_srvs/Empty", "nav_msgs/GetMap", "nav_msgs/GetPlan",
         "sensor_msgs/SetCameraInfo", "topic_tools/MuxAdd",
-        "topic_tools/MuxSelect", "tf2_msgs/FrameGraph",
-        "rospy_tutorials/BadTwoInts", "rospy_tutorials/AddTwoInts"]
+        "topic_tools/MuxSelect", "tf2_msgs/FrameGraph"]
         for x in common:
             self.assertNotEqual(ros_loader.get_service_class(x), None)
             self.assertNotEqual(ros_loader.get_service_instance(x), None)
@@ -201,8 +199,7 @@ class TestROSLoader(unittest.TestCase):
 
     def test_nonexistent_service_classnames(self):
         nonexistent = ["std_srvs/KillAllHumans", "std_srvs/Full",
-        "rospy_tutorials/SubtractTwoInts", "nav_msgs/LoseMap",
-        "topic_tools/TellMeWhatThisTopicIsActuallyAbout"]
+        "nav_msgs/LoseMap", "topic_tools/TellMeWhatThisTopicIsActuallyAbout"]
         for x in nonexistent:
             self.assertRaises(ros_loader.InvalidClassException,
                               ros_loader.get_service_class, x)

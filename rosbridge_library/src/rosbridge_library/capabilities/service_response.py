@@ -19,6 +19,7 @@ class ServiceResponse(Capability):
 
     def service_response(self, message):
         # Typecheck the args
+        # Disable type check for service_response
         #self.basic_type_check(message, self.service_response_msg_fields)
 
         # check for the service
