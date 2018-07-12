@@ -53,11 +53,11 @@ class TestServiceCapabilities(unittest.TestCase):
 
         # this message has the optional fields, with correct types, but not the
         # required ones
-    #    response_msg = loads(dumps({"op": "service_response",
-    #                                "id": "dummy_service",
-    #                                "values": "none"}))
-    #    self.assertRaises(MissingArgumentException,
-    #                      self.response.service_response, response_msg)
+        response_msg = loads(dumps({"op": "service_response",
+                                    "id": "dummy_service",
+                                    "values": "none"}))
+        self.assertRaises(MissingArgumentException,
+                          self.response.service_response, response_msg)
 
     def test_response_invalid_arguments(self):
         response_msg = loads(dumps({"op": "service_response",
