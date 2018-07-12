@@ -190,8 +190,7 @@ class TestServices(unittest.TestCase):
         common = ["roscpp/GetLoggers", "roscpp/SetLoggerLevel",
         "std_srvs/Empty", "nav_msgs/GetMap", "nav_msgs/GetPlan",
         "sensor_msgs/SetCameraInfo", "topic_tools/MuxAdd",
-        "topic_tools/MuxSelect", "tf2_msgs/FrameGraph",
-        "rospy_tutorials/BadTwoInts", "rospy_tutorials/AddTwoInts"]
+        "topic_tools/MuxSelect", "tf2_msgs/FrameGraph"]
         ts = []
         for srv in common:
             t = ServiceTester("/test_random_service_types/" + srv, srv)

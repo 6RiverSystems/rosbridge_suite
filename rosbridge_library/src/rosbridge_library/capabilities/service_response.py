@@ -7,7 +7,7 @@ class ServiceResponse(Capability):
 
     service_response_msg_fields = [
         (True, "service", string_types), (False, "id", string_types),
-        (False, "values", dict), (True, "result", bool)
+        (False, "values", dict), (False, "result", bool)
     ]
 
     def __init__(self, protocol):
