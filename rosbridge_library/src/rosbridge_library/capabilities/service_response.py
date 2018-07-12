@@ -7,7 +7,7 @@ class ServiceResponse(Capability):
 
     service_response_msg_fields = [
         (True, "service", string_types), (False, "id", string_types),
-        (False, "values", dict), (True, "result", bool)
+        (False, "values", dict), (False, "result", bool)
     ]
 
     def __init__(self, protocol):
@@ -19,8 +19,7 @@ class ServiceResponse(Capability):
 
     def service_response(self, message):
         # Typecheck the args
-        # Disable type check for service_response
-        #self.basic_type_check(message, self.service_response_msg_fields)
+        self.basic_type_check(message, self.service_response_msg_fields)
 
         # check for the service
         service_name = message["service"]

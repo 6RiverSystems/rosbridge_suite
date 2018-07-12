@@ -45,7 +45,6 @@ class TestServiceCapabilities(unittest.TestCase):
         self.assertRaises(InvalidArgumentException,
                           self.advertise.advertise_service, advertise_msg)
 
-    '''
     def test_response_missing_arguments(self):
         response_msg = loads(dumps({"op": "service_response"}))
         self.assertRaises(MissingArgumentException,
@@ -65,7 +64,7 @@ class TestServiceCapabilities(unittest.TestCase):
                                     "result": "error"}))
         self.assertRaises(InvalidArgumentException,
                           self.response.service_response, response_msg)
-    '''
+
     def test_advertise_service(self):
         service_path = "/set_bool_1"
         advertise_msg = loads(dumps({"op": "advertise_service",

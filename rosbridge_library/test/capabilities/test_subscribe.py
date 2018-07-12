@@ -90,7 +90,7 @@ class TestSubscribe(unittest.TestCase):
 
         msg = {"op": "subscribe", "topic": "/jon", "compression": 9000}
         self.assertRaises(InvalidArgumentException, sub.subscribe, msg)
-    '''
+
     def test_subscribe_works(self):
         proto = Protocol("test_subscribe_works")
         sub = subscribe.Subscribe(proto)
@@ -114,7 +114,7 @@ class TestSubscribe(unittest.TestCase):
 
         time.sleep(0.25)
         self.assertEqual(received["msg"]["msg"]["data"], msg.data)
-    '''
+
 
 PKG = 'rosbridge_library'
 NAME = 'test_subscribe'
