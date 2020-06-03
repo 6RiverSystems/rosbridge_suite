@@ -2,6 +2,7 @@
   <arg name="ssl" default="false" />
   <arg name="certfile" default=""/>
   <arg name="keyfile" default="" />
+  <arg name="jwt_token" value="$(env JWT_TOKEN)"/>
 
   <arg name="retry_startup_delay" default="5" />
 
@@ -37,6 +38,7 @@
       <param name="max_message_size" value="$(arg max_message_size)"/>
       <param name="unregister_timeout" value="$(arg unregister_timeout)"/>
       <param name="use_compression" value="$(arg use_compression)"/>
+      <param name="jwt_token" value="$(arg jwt_token)"/>
 
       <param name="websocket_ping_interval" value="$(arg websocket_ping_interval)" />
       <param name="websocket_ping_timeout" value="$(arg websocket_ping_timeout)" />
@@ -56,6 +58,7 @@
       <param name="max_message_size" value="$(arg max_message_size)"/>
       <param name="unregister_timeout" value="$(arg unregister_timeout)"/>
       <param name="use_compression" value="$(arg use_compression)"/>
+      <param name="jwt_token" value="$(arg jwt_token)"/>
 
       <param name="websocket_ping_interval" value="$(arg websocket_ping_interval)" />
       <param name="websocket_ping_timeout" value="$(arg websocket_ping_timeout)" />

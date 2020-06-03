@@ -69,6 +69,8 @@ if __name__ == "__main__":
     # Parameter handling                             #
     ##################################################
     use_compression = rospy.get_param('~use_compression', False)
+    jwt_token = rospy.get_param('~jwt_token')
+
     socketServerURL = rospy.get_param('~ros_bridge_socket_server_url')
 
    # get RosbridgeProtocol parameters
@@ -230,7 +232,9 @@ if __name__ == "__main__":
             if isinstance(offer, PerMessageDeflateOffer):
                 return PerMessageDeflateOfferAccept(offer)
 
-    factory = RosbridgeWebSocketClientFactory(socketServerURL)
+    headers = {'Barrier Token': jwt_token}
+
+    factory = RosbridgeWebSocketClientFactory(socketServerURL, headers=headers)
 
     # SSL client context: default
     ##
