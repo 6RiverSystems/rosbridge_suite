@@ -232,7 +232,7 @@ if __name__ == "__main__":
             if isinstance(offer, PerMessageDeflateOffer):
                 return PerMessageDeflateOfferAccept(offer)
 
-    headers = {'Authorization' : 'Bearer {}'.format(jwt_token)}
+    headers = {'Authorization': 'Bearer {}'.format(jwt_token)}
 
     factory = RosbridgeWebSocketClientFactory(socketServerURL, headers=headers)
 
