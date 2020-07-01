@@ -69,7 +69,8 @@ if __name__ == "__main__":
     # Parameter handling                             #
     ##################################################
     use_compression = rospy.get_param('~use_compression', False)
-    jwt_token = rospy.get_param('~jwt_token')
+    if rospy.has_param('~jwt_token'):
+        jwt_token = rospy.get_param('~jwt_token')
 
     socketServerURL = rospy.get_param('~ros_bridge_socket_server_url')
 
