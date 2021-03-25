@@ -246,19 +246,19 @@ if __name__ == "__main__":
         context_factory = None
 
     # https://github.com/crossbario/autobahn-python/commit/2ef13a6804054de74eb36455b58a64a3c701f889
-    if LooseVersion(autobahn.__version__) < LooseVersion("0.15.0"):
-        factory.setProtocolOptions(
-            perMessageCompressionAccept=handle_compression_offers,
-            autoPingInterval=ping_interval,
-            autoPingTimeout=ping_timeout,
-        )
-    else:
-        factory.setProtocolOptions(
-            perMessageCompressionAccept=handle_compression_offers,
-            autoPingInterval=ping_interval,
-            autoPingTimeout=ping_timeout,
-            allowNullOrigin=null_origin,
-        )
+    # if LooseVersion(autobahn.__version__) < LooseVersion("0.15.0"):
+    factory.setProtocolOptions(
+        perMessageCompressionAccept=handle_compression_offers,
+        autoPingInterval=ping_interval,
+        autoPingTimeout=ping_timeout,
+    )
+    # else:
+    #    factory.setProtocolOptions(
+    #        perMessageCompressionAccept=handle_compression_offers,
+    #        autoPingInterval=ping_interval,
+    #        autoPingTimeout=ping_timeout,
+    #        allowNullOrigin=null_origin,
+    #    )
 
     connectWS(factory, context_factory)
     rospy.loginfo('Rosbridge WebSocket client started at {}'.format(socketServerURL))
