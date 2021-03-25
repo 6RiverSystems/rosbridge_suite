@@ -1,4 +1,5 @@
 import rospy
+from rosauth.srv import Authentication
 from rosbridge_library.rosbridge_protocol import RosbridgeProtocol
 from rosbridge_library.util import json, bson
 
@@ -13,7 +14,7 @@ class RosbridgeUdpFactory(DatagramProtocol):
         if endpoint in self.socks:
             self.socks[endpoint].datagramReceived(message)
         else:
-            writefunc = lambda msg: self.transport.write(msg, (host,port))
+            writefunc = lambda msg: self.transport.write(msg.encode(), (host,port))
             self.socks[endpoint] = RosbridgeUdpSocket(writefunc)
             self.socks[endpoint].startProtocol()
             self.socks[endpoint].datagramReceived(message)
@@ -21,6 +22,7 @@ class RosbridgeUdpFactory(DatagramProtocol):
 class RosbridgeUdpSocket:
     client_id_seed = 0
     clients_connected = 0
+    client_count_pub = None
     authenticate = False
 
     # The following parameters are passed on to RosbridgeProtocol
@@ -49,6 +51,8 @@ class RosbridgeUdpSocket:
             self.authenticated = False
             cls.client_id_seed += 1
             cls.clients_connected += 1
+            if cls.client_count_pub:
+                cls.client_count_pub.publish(cls.clients_connected)
         except Exception as exc:
             rospy.logerr("Unable to accept incoming connection.  Reason: %s", str(exc))
         rospy.loginfo("Client connected.  %d clients total.", cls.clients_connected)
@@ -86,6 +90,8 @@ class RosbridgeUdpSocket:
         cls = self.__class__
         cls.clients_connected -= 1
         self.protocol.finish()
+        if cls.client_count_pub:
+            cls.client_count_pub.publish(cls.clients_connected)
         rospy.loginfo("Client disconnected. %d clients total.", cls.clients_connected)
     def send_message(self, message):
         binary = type(message)==bson.BSON

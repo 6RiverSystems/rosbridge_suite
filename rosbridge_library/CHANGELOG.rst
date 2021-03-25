@@ -2,6 +2,167 @@
 Changelog for package rosbridge_library
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.11.13 (2020-12-08)
+--------------------
+* fix python-future dependency (`#542 <https://github.com/RobotWebTools/rosbridge_suite/issues/542>`_)
+  * fix python-future dependency
+  This was not fixed with fadffa09b1b572e4dc11848c31bb6ebab4a3e95d
+  The dependency was added with `#541 <https://github.com/RobotWebTools/rosbridge_suite/issues/541>`_
+  Python doesn't have build dependencies, only exec dependencies
+  * update ros-tooling/action-ros-ci
+  See:
+  https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/
+  This was fixed upstream
+  - https://github.com/ros-tooling/action-ros-ci/issues/429
+  - https://github.com/ros-tooling/action-ros-ci/pull/430
+  * update ros-tooling/setup-ros
+  See:
+  https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/
+  This is needed for upstream fix
+  - https://github.com/ros-tooling/setup-ros/pull/303
+* Contributors: Alex Moriarty
+
+0.11.12 (2020-11-25)
+--------------------
+* Fix missing python-future python 2 dep
+* Contributors: Matt Vollrath
+
+0.11.11 (2020-11-24)
+--------------------
+* Use Python 3 str in incoming (`#541 <https://github.com/RobotWebTools/rosbridge_suite/issues/541>`_)
+  Fixes Python 2 unicode issues.
+  Supersedes `#539 <https://github.com/RobotWebTools/rosbridge_suite/issues/539>`_ to fix regression in `#514 <https://github.com/RobotWebTools/rosbridge_suite/issues/514>`_
+* Contributors: Matt Vollrath
+
+0.11.10 (2020-09-08)
+--------------------
+* possible fix for error when working with RosSharp, TypeError: can only concatenate str (not bytes) to str (`#514 <https://github.com/RobotWebTools/rosbridge_suite/issues/514>`_)
+  Co-authored-by: Dmitri <dmitri@dmitri.com>
+* Contributors: Dmitri
+
+0.11.9 (2020-05-27)
+-------------------
+* noetic tests and fixes (`#503 <https://github.com/RobotWebTools/rosbridge_suite/issues/503>`_)
+* Contributors: Matt Vollrath
+
+0.11.8 (2020-05-21)
+-------------------
+
+0.11.7 (2020-05-13)
+-------------------
+* Fix backpressure deadlock (`#496 <https://github.com/RobotWebTools/rosbridge_suite/issues/496>`_)
+  * Don't block Subscription.unregister()
+  * Don't add messages to finished queue handler
+  * Decouple incoming WS handling from server thread
+* Contributors: Matt Vollrath
+
+0.11.6 (2020-04-29)
+-------------------
+
+0.11.5 (2020-04-08)
+-------------------
+* Add script for dockerized development shell (`#479 <https://github.com/RobotWebTools/rosbridge_suite/issues/479>`_)
+  * Add script for dockerized development shell
+  * Fix queue dropping test
+* Subscriber concurrency review (`#478 <https://github.com/RobotWebTools/rosbridge_suite/issues/478>`_)
+  * Lock access to SubscriberManager public methods
+  Prevent subscribe during unsubscribe critical section.
+  * Unsubscribing an unsubscribed topic is an error
+  This branch must not be ignored.
+  * Cleanup some redundant syntax in subscribers impl
+* Fix queue blocking (`#464 <https://github.com/RobotWebTools/rosbridge_suite/issues/464>`_)
+  * Unblock QueueMessageHandler.handle_message
+  The thread was holding the lock while pushing to a potentially blocking
+  function.  Rewrite the logic and use a deque while we're at it.
+  * Add test for subscription queue behavior
+  Guarantee that the queue drops messages when blocked.
+* Python 3 updates/fixes (`#460 <https://github.com/RobotWebTools/rosbridge_suite/issues/460>`_)
+  * rosbridge_library, rosbridge_server: Update package format
+  Add Python3 conditional dependencies where applicable.
+  * rosbridge_library: Fix pngcompression for Python 3
+  * rosapi: Use catkin_install_python for scripts
+* Fixing wrong header/stamp in published ROS-messsages (`#472 <https://github.com/RobotWebTools/rosbridge_suite/issues/472>`_)
+  When publishing a message to ROS (i.e. incoming from rosbridge_server's perspective), timestamps in the Header attributes all point to the same Time object iff the message contains multiple Header attributes (typically the case if a ROS message contains other ROS messages, e.g. ...Array-types) and rosparam use_sim_time is true.
+* Contributors: Alexey Rogachevskiy, Matt Vollrath, danielmaier
+
+0.11.4 (2020-02-20)
+-------------------
+* Concurrency review (`#458 <https://github.com/RobotWebTools/rosbridge_suite/issues/458>`_)
+  * Safer locking in PublisherConsistencyListener
+  * Safer locking in ros_loader
+  * Print QueueMessageHandler exceptions to stderr
+  * Register before resuming outgoing valve
+  * Don't pause a finished socket valve
+* Add cbor-raw compression (`#452 <https://github.com/RobotWebTools/rosbridge_suite/issues/452>`_)
+  The CBOR compression is already a huge win over JSON or PNG encoding,
+  but it’s still suboptimal in some situations. This PR adds support for
+  getting messages in their raw binary (ROS-serialized) format. This has
+  benefits in the following cases:
+  - Your application already knows how to parse messages in bag files
+  (e.g. using [rosbag.js](https://github.com/cruise-automation/rosbag.js),
+  which means that now you can use consistent code paths for both bags
+  and live messages.
+  - You want to parse messages as late as possible, or in parallel, e.g.
+  only in the thread or WebWorker that cares about the message. Delaying
+  the parsing of the message means that moving or copying the message to
+  the thread is cheaper when its in binary form, since no serialization
+  between threads is necessary.
+  - You only care about part of the message, and don't need to parse the
+  rest of it.
+  - You really care about performance; no conversion between the ROS
+  binary format and CBOR is done in the rosbridge_sever.
+* Fix typos in rosbridge_library's description (`#450 <https://github.com/RobotWebTools/rosbridge_suite/issues/450>`_)
+* Python 3 fix for dict::values (`#446 <https://github.com/RobotWebTools/rosbridge_suite/issues/446>`_)
+  Under Python 3, values() returns a view-like object, and because that object is used outside the mutex, we were getting `RuntimeError: dictionary changed size during iteration` under some circumstances. This creates a copy of the values, restoring the Python 2 behaviour and fixing the problem.
+* Contributors: Jan Paul Posma, Matt Vollrath, Mike Purvis, miller-alex
+
+0.11.3 (2019-08-07)
+-------------------
+
+0.11.2 (2019-07-08)
+-------------------
+
+0.11.1 (2019-05-08)
+-------------------
+* fixed logwarn msg formatting in publishers (`#398 <https://github.com/RobotWebTools/rosbridge_suite/issues/398>`_)
+* Contributors: Gautham P Das
+
+0.11.0 (2019-03-29)
+-------------------
+* BSON can send Nan and Inf (`#391 <https://github.com/RobotWebTools/rosbridge_suite/issues/391>`_)
+* Contributors: akira_you
+
+0.10.2 (2019-03-04)
+-------------------
+* Fix typo (`#379 <https://github.com/RobotWebTools/rosbridge_suite/issues/379>`_)
+* Contributors: David Weis
+
+0.10.1 (2018-12-16)
+-------------------
+* Inline cbor library (`#377 <https://github.com/RobotWebTools/rosbridge_suite/issues/377>`_)
+  Prefer system version with C speedups, but include pure Python implementation.
+* Contributors: Matt Vollrath
+
+0.10.0 (2018-12-14)
+-------------------
+* CBOR encoding (`#364 <https://github.com/RobotWebTools/rosbridge_suite/issues/364>`_)
+  * Add CBOR encoding
+  * Fix value extraction performance regression
+  Extract message values once per message.
+  * Fix typed array tags
+  Was using big-endian tags and encoding little-endian.
+  Always use little-endian for now since Intel is prevalent for desktop.
+  Add some comments to this effect.
+  * Update CBOR protocol documentation
+  More information about draft typed arrays and when to use CBOR.
+  * Fix 64-bit integer CBOR packing
+  Use an actual 64-bit format.
+* use package format 2, remove unnecessary dependencies (`#348 <https://github.com/RobotWebTools/rosbridge_suite/issues/348>`_)
+* removing has_key for python3, keeping backwards compatibility (`#337 <https://github.com/RobotWebTools/rosbridge_suite/issues/337>`_)
+  * removing has_key for python3, keeping backwards compatibility
+  * py3 change for itervalues, keeping py2 compatibility
+* Contributors: Andreas Klintberg, Dirk Thomas, Matt Vollrath
+
 0.9.0 (2018-04-09)
 ------------------
 * Fix typo in function call

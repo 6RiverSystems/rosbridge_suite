@@ -1,6 +1,6 @@
 <launch>
   <arg name="port" default="9090" />
-  <arg name="address" default="" />
+  <arg name="address" default="0.0.0.0" />
   <arg name="ssl" default="false" />
   <arg name="certfile" default=""/>
   <arg name="keyfile" default="" />
@@ -11,19 +11,28 @@
   <arg name="delay_between_messages" default="0" />
   <arg name="max_message_size" default="None" />
   <arg name="unregister_timeout" default="10" />
+  <arg name="websocket_external_port" default="None" />
+
+  <arg name="use_compression" default="false" />
 
   <arg name="authenticate" default="false" />
+
+  <arg name="websocket_ping_interval" default="0" />
+  <arg name="websocket_ping_timeout" default="30" />
+  <arg name="websocket_null_origin" default="true" />
 
   <arg name="topics_glob" default="[*]" />
   <arg name="services_glob" default="[*]" />
   <arg name="params_glob" default="[*]" />
   <arg name="bson_only_mode" default="false" />
+  <!-- Output: screen, log -->
+  <arg name="output" default="screen" />
 
   <!-- Valid options for binary_encoder are "default", "b64" and "bson". -->
   <arg unless="$(arg bson_only_mode)" name="binary_encoder" default="default"/>
 
   <group if="$(arg ssl)">
-    <node name="rosbridge_websocket" pkg="rosbridge_server" type="rosbridge_websocket" output="screen">
+    <node name="rosbridge_websocket" pkg="rosbridge_server" type="rosbridge_websocket" output="$(arg output)">
       <param name="certfile" value="$(arg certfile)" />
       <param name="keyfile" value="$(arg keyfile)" />
       <param name="authenticate" value="$(arg authenticate)" />
@@ -34,6 +43,12 @@
       <param name="delay_between_messages" value="$(arg delay_between_messages)"/>
       <param name="max_message_size" value="$(arg max_message_size)"/>
       <param name="unregister_timeout" value="$(arg unregister_timeout)"/>
+      <param name="use_compression" value="$(arg use_compression)"/>
+
+      <param name="websocket_ping_interval" value="$(arg websocket_ping_interval)" />
+      <param name="websocket_ping_timeout" value="$(arg websocket_ping_timeout)" />
+      <param name="websocket_external_port" value="$(arg websocket_external_port)" />
+      <param name="websocket_null_origin" value="$(arg websocket_null_origin)" />
 
       <param name="topics_glob" value="$(arg topics_glob)"/>
       <param name="services_glob" value="$(arg services_glob)"/>
@@ -41,7 +56,7 @@
     </node>
   </group>
   <group unless="$(arg ssl)">
-    <node name="rosbridge_websocket" pkg="rosbridge_server" type="rosbridge_websocket" output="screen">
+    <node name="rosbridge_websocket" pkg="rosbridge_server" type="rosbridge_websocket" output="$(arg output)">
       <param name="authenticate" value="$(arg authenticate)" />
       <param name="port" value="$(arg port)"/>
       <param name="address" value="$(arg address)"/>
@@ -50,6 +65,11 @@
       <param name="delay_between_messages" value="$(arg delay_between_messages)"/>
       <param name="max_message_size" value="$(arg max_message_size)"/>
       <param name="unregister_timeout" value="$(arg unregister_timeout)"/>
+      <param name="use_compression" value="$(arg use_compression)"/>
+
+      <param name="websocket_ping_interval" value="$(arg websocket_ping_interval)" />
+      <param name="websocket_ping_timeout" value="$(arg websocket_ping_timeout)" />
+      <param name="websocket_external_port" value="$(arg websocket_external_port)" />
 
       <param name="topics_glob" value="$(arg topics_glob)"/>
       <param name="services_glob" value="$(arg services_glob)"/>
@@ -59,7 +79,7 @@
     </node>
   </group>
 
-  <node name="rosapi" pkg="rosapi" type="rosapi_node">
+  <node name="rosapi" pkg="rosapi" type="rosapi_node" output="$(arg output)">
     <param name="topics_glob" value="$(arg topics_glob)"/>
     <param name="services_glob" value="$(arg services_glob)"/>
     <param name="params_glob" value="$(arg params_glob)"/>

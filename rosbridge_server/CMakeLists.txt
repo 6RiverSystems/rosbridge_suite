@@ -7,7 +7,7 @@ catkin_python_setup()
 
 catkin_package()
 
-install(PROGRAMS
+catkin_install_python(PROGRAMS
   scripts/rosbridge_websocket.py
   scripts/rosbridge_websocket
   scripts/rosbridge_tcp.py
@@ -24,3 +24,7 @@ install(FILES
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
 )
 
+if (CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
+  add_rostest(test/websocket/test_smoke.test)
+endif()

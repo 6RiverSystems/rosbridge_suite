@@ -2,6 +2,112 @@
 Changelog for package rosapi
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.11.13 (2020-12-08)
+--------------------
+
+0.11.12 (2020-11-25)
+--------------------
+
+0.11.11 (2020-11-24)
+--------------------
+* Evaluate filter() generator before returning in get_param_names() which is required when using python3. Fixes `#527 <https://github.com/RobotWebTools/rosbridge_suite/issues/527>`_. (`#540 <https://github.com/RobotWebTools/rosbridge_suite/issues/540>`_)
+* Contributors: Steve Golton
+
+0.11.10 (2020-09-08)
+--------------------
+* Fixed filter_globs for noetic (`#506 <https://github.com/RobotWebTools/rosbridge_suite/issues/506>`_)
+  Service calls with non empty requests (e.g. /rosapi/topics_for_type) were crashing due to filter's return type in python 3.
+* Contributors: foreignrobot
+
+0.11.9 (2020-05-27)
+-------------------
+
+0.11.8 (2020-05-21)
+-------------------
+
+0.11.7 (2020-05-13)
+-------------------
+
+0.11.6 (2020-04-29)
+-------------------
+
+0.11.5 (2020-04-08)
+-------------------
+* Python 3 updates/fixes (`#460 <https://github.com/RobotWebTools/rosbridge_suite/issues/460>`_)
+  * rosbridge_library, rosbridge_server: Update package format
+  Add Python3 conditional dependencies where applicable.
+  * rosbridge_library: Fix pngcompression for Python 3
+  * rosapi: Use catkin_install_python for scripts
+* Contributors: Alexey Rogachevskiy
+
+0.11.4 (2020-02-20)
+-------------------
+* Add cbor-raw compression (`#452 <https://github.com/RobotWebTools/rosbridge_suite/issues/452>`_)
+  The CBOR compression is already a huge win over JSON or PNG encoding,
+  but it’s still suboptimal in some situations. This PR adds support for
+  getting messages in their raw binary (ROS-serialized) format. This has
+  benefits in the following cases:
+  - Your application already knows how to parse messages in bag files
+  (e.g. using [rosbag.js](https://github.com/cruise-automation/rosbag.js),
+  which means that now you can use consistent code paths for both bags
+  and live messages.
+  - You want to parse messages as late as possible, or in parallel, e.g.
+  only in the thread or WebWorker that cares about the message. Delaying
+  the parsing of the message means that moving or copying the message to
+  the thread is cheaper when its in binary form, since no serialization
+  between threads is necessary.
+  - You only care about part of the message, and don't need to parse the
+  rest of it.
+  - You really care about performance; no conversion between the ROS
+  binary format and CBOR is done in the rosbridge_sever.
+* Fix rosapi get_action_servers (`#429 <https://github.com/RobotWebTools/rosbridge_suite/issues/429>`_)
+  The currently used proxy.get_topics function does not exists and results in the following error: `"AttributeError: 'module' object has no attribute 'get_topics'\n"`
+  This change uses the existing `get_topics_and_types` method to get a list of topics.
+* Contributors: Jan Paul Posma, Jørgen Borgesen
+
+0.11.3 (2019-08-07)
+-------------------
+* Travis CI: Look for Python syntax errors and undefined name (`#420 <https://github.com/RobotWebTools/rosbridge_suite/issues/420>`_)
+  * Travis CI: Look for Python syntax errors and undefined name
+  _It would be prudent to start running the tests in both 2 and 3._  https://github.com/RobotWebTools/rosbridge_suite/issues/401#issuecomment-512069249
+  * Add names to protect the guilty
+  * Five jobs, not six
+  * Identity is not the same thing as equality in Python
+  * Flake8 tests now pass on Python 2
+* Contributors: cclauss
+
+0.11.2 (2019-07-08)
+-------------------
+* constnames and constvalues in typedef (`#412 <https://github.com/RobotWebTools/rosbridge_suite/issues/412>`_)
+* Contributors: Kad91
+
+0.11.1 (2019-05-08)
+-------------------
+
+0.11.0 (2019-03-29)
+-------------------
+
+0.10.2 (2019-03-04)
+-------------------
+* Use Master.getTopicTypes() in /rosapi/topics to increase performance (`#381 <https://github.com/RobotWebTools/rosbridge_suite/issues/381>`_)
+* Contributors: Affonso, Guilherme
+
+0.10.1 (2018-12-16)
+-------------------
+
+0.10.0 (2018-12-14)
+-------------------
+* Drop use of ros Python module (`#374 <https://github.com/RobotWebTools/rosbridge_suite/issues/374>`_)
+* Fixes passing of globs to proxy (`#355 <https://github.com/RobotWebTools/rosbridge_suite/issues/355>`_)
+  * Fixes handling and passing of globs to proxy
+  * Removes some confusing imports
+* Fix a few problems (`#350 <https://github.com/RobotWebTools/rosbridge_suite/issues/350>`_)
+  * xrange is not available in Python3, range works for both Python versions
+  * the variable v is undefined in search_param, comparing the implementation with the sibling functions I expect name to be the intended variable
+  * The module udp_handler is using the Authentication service but wasn't importing the module
+* use package format 2, remove unnecessary dependencies (`#348 <https://github.com/RobotWebTools/rosbridge_suite/issues/348>`_)
+* Contributors: Anwar, Dirk Thomas, Jochen Sprickerhof
+
 0.9.0 (2018-04-09)
 ------------------
 

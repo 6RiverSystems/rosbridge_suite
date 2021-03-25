@@ -1,4 +1,4 @@
-# try to import json-lib: 1st try usjon, 2nd try simplejson, else import standard python json
+# try to import json-lib: 1st try ujson, 2nd try simplejson, else import standard python json
 try:
     import ujson as json
 except ImportError:
@@ -11,10 +11,10 @@ except ImportError:
 import sys
 if sys.version_info >= (3, 0):
     string_types = (str,)
-    from io import StringIO
+    from io import StringIO, BytesIO
 else:
-    string_types = (str, unicode)
-    from StringIO import StringIO
+    string_types = (str, unicode)  # noqa: F821
+    from StringIO import StringIO, StringIO as BytesIO
 
 import bson
 try:

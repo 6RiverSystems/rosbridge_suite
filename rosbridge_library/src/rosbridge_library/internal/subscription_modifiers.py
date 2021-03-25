@@ -30,8 +30,11 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from collections import deque
 from threading import Thread, Condition
 from time import time
+import traceback
+import sys
 
 """ Sits between incoming messages from a subscription, and the outgoing
 publish method.  Provides throttling / buffering capabilities.
@@ -77,7 +80,7 @@ class MessageHandler():
         else:
             return QueueMessageHandler(self)
 
-    def finish(self):
+    def finish(self, block=True):
         pass
 
 
@@ -95,7 +98,7 @@ class ThrottleMessageHandler(MessageHandler):
         else:
             return QueueMessageHandler(self)
 
-    def finish(self):
+    def finish(self, block=True):
         pass
 
 
@@ -105,17 +108,18 @@ class QueueMessageHandler(MessageHandler, Thread):
         Thread.__init__(self)
         MessageHandler.__init__(self, previous_handler)
         self.daemon = True
-        self.queue = []
+        self.queue = deque(maxlen=self.queue_length)
         self.c = Condition()
         self.alive = True
         self.start()
 
     def handle_message(self, msg):
         with self.c:
+            if not self.alive:
+                return
+
             should_notify = len(self.queue) == 0
             self.queue.append(msg)
-            if len(self.queue) > self.queue_length:
-                del self.queue[0:len(self.queue) - self.queue_length]
             if should_notify:
                 self.c.notify()
 
@@ -128,37 +132,40 @@ class QueueMessageHandler(MessageHandler, Thread):
             return ThrottleMessageHandler(self)
         else:
             with self.c:
-                if len(self.queue) > self.queue_length:
-                    del self.queue[0:len(self.queue) - self.queue_length]
+                old_queue = self.queue
+                self.queue = deque(maxlen=self.queue_length)
+                while len(old_queue) > 0:
+                    self.queue.append(old_queue.popleft())
                 self.c.notify()
             return self
 
-    def finish(self):
+    def finish(self, block=True):
         """ If throttle was set to 0, this pushes all buffered messages """
         # Notify the thread to finish
         with self.c:
             self.alive = False
             self.c.notify()
 
-        self.join()
+        if block:
+            self.join()
 
     def run(self):
         while self.alive:
+            msg = None
             with self.c:
-                while self.alive and (self.time_remaining() > 0 or len(self.queue) == 0):
-                    if len(self.queue) == 0:
-                        self.c.wait()
-                    else:
-                        self.c.wait(self.time_remaining())
+                if len(self.queue) == 0:
+                    self.c.wait()
+                else:
+                    self.c.wait(self.time_remaining())
                 if self.alive and self.time_remaining() == 0 and len(self.queue) > 0:
-                    try:
-                        MessageHandler.handle_message(self, self.queue[0])
-                    except:
-                        pass
-                    del self.queue[0]
+                    msg = self.queue.popleft()
+            if msg is not None:
+                try:
+                    MessageHandler.handle_message(self, msg)
+                except:
+                    traceback.print_exc(file=sys.stderr)
         while self.time_remaining() == 0 and len(self.queue) > 0:
             try:
-                MessageHandler.handle_message(self, self.queue[0])
+                MessageHandler.handle_message(self, self.queue.popleft())
             except:
-                pass
-            del self.queue[0]
+                traceback.print_exc(file=sys.stderr)

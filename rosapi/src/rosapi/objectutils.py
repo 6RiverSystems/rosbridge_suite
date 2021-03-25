@@ -32,11 +32,11 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from rosbridge_library.internal import ros_loader
+import inspect
 
 # Keep track of atomic types and special types
 atomics = ['bool', 'byte','int8', 'uint8', 'int16', 'uint16', 'int32', 'uint32', 'int64', 'uint64', 'float32', 'float64', 'string']
 specials = ['time', 'duration']
-
 
 def get_typedef(type):
     """ A typedef is a dict containing the following fields:
@@ -45,6 +45,8 @@ def get_typedef(type):
          - string[] fieldtypes
          - int[] fieldarraylen
          - string[] examples
+         - string[] constnames
+         - string[] constvalues
     get_typedef will return a typedef dict for the specified message type """
     if type in atomics:
         # Atomics don't get a typedef
@@ -93,6 +95,15 @@ def get_service_response_typedef_recursive(servicetype):
     # Return the list of sub-typedefs
     return _get_subtypedefs_recursive(typedef, [])
 
+def get_typedef_full_text(type):
+    """ Returns the full text (similar to `gendeps --cat`) for the specified message type """
+    # Get an instance of the service response class and get its typedef
+    try:
+        instance = ros_loader.get_message_instance(type)
+        return instance._full_text
+    except Exception:
+        return ""
+
 def _get_typedef(instance):
     """ Gets a typedef dict for the specified instance """
     if instance is None or not hasattr(instance, "__slots__") or not hasattr(instance, "_slot_types"):
@@ -102,7 +113,9 @@ def _get_typedef(instance):
     fieldtypes = []
     fieldarraylen = []
     examples = []
-    for i in xrange(len(instance.__slots__)):
+    constnames = []
+    constvalues = []
+    for i in range(len(instance.__slots__)):
         # Pull out the name
         name = instance.__slots__[i]
         fieldnames.append(name)
@@ -132,12 +145,21 @@ def _get_typedef(instance):
             example = {}
         examples.append(str(example))
 
+    # Add pseudo constants names and values filtering members
+    attributes = inspect.getmembers(instance)
+    for attribute in attributes:
+        if attribute[0] not in instance.__slots__ and not attribute[0].startswith('_') and not inspect.isroutine(attribute[1]):
+            constnames.append(str(attribute[0]))
+            constvalues.append(str(attribute[1]))
+
     typedef = {
-       "type": _type_name_from_instance(instance),
-       "fieldnames": fieldnames,
-       "fieldtypes": fieldtypes,
-       "fieldarraylen": fieldarraylen,
-       "examples": examples
+        "type" : _type_name_from_instance(instance),
+        "fieldnames" : fieldnames,
+        "fieldtypes" : fieldtypes,
+        "fieldarraylen" : fieldarraylen,
+        "examples" : examples,
+        "constnames" : constnames,
+        "constvalues" : constvalues
     }
 
     return typedef
@@ -150,7 +172,9 @@ def _get_special_typedef(type):
             "fieldnames": ["secs", "nsecs"],
             "fieldtypes": ["int32", "int32"],
             "fieldarraylen": [-1, -1],
-            "examples": [ "0", "0" ]
+            "examples": [ "0", "0" ],
+            "constnames": [],
+            "constvalues": []
         }
     return example
 

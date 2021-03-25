@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(rosapi)
 
-find_package(catkin REQUIRED COMPONENTS rospy message_generation)
+find_package(catkin REQUIRED COMPONENTS message_generation)
 catkin_python_setup()
 
 add_message_files(
@@ -33,6 +33,7 @@ add_service_files(
   SetParam.srv
   Subscribers.srv
   Topics.srv
+  TopicsAndRawTypes.srv
   TopicsForType.srv
   TopicType.srv
 )
@@ -45,6 +46,6 @@ catkin_package(
   CATKIN_DEPENDS message_runtime
 )
 
-install(PROGRAMS scripts/rosapi_node
+catkin_install_python(PROGRAMS scripts/rosapi_node
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

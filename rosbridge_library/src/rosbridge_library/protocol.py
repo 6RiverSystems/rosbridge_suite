@@ -30,6 +30,9 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from __future__ import unicode_literals
+from builtins import str
+
 import rospy
 import time
 
@@ -56,7 +59,7 @@ def has_binary(obj):
         return any(has_binary(item) for item in obj)
 
     if isinstance(obj, dict):
-        return any(has_binary(item) for item in obj.itervalues())
+        return any(has_binary(obj[item]) for item in obj)
 
     return isinstance(obj, bson.binary.Binary)
 
@@ -117,7 +120,7 @@ class Protocol:
         message_string -- the wire-level message sent by the client
 
         """
-        self.buffer = self.buffer + message_string
+        self.buffer = self.buffer + str(message_string)
         msg = None
 
         # take care of having multiple JSON-objects in receiving buffer
@@ -286,6 +289,8 @@ class Protocol:
         Returns a JSON string representing the dictionary
         """
         try:
+            if type(msg) == bytearray:
+                return msg
             if has_binary(msg) or self.bson_only_mode:
                 return bson.BSON.encode(msg)
             else:    

@@ -37,6 +37,8 @@ from rostopic import get_topic_type
 from rosbridge_library.internal import ros_loader, message_conversion
 from rosbridge_library.internal.topics import TopicNotEstablishedException
 from rosbridge_library.internal.topics import TypeConflictException
+from rosbridge_library.internal.outgoing_message import OutgoingMessage
+from rospy.msg import AnyMsg
 
 """ Manages and interfaces with ROS Subscriber objects.  A single subscriber
 is shared between multiple clients
@@ -78,12 +80,15 @@ class MultiSubscriber():
         if msg_type is None:
             msg_type = topic_type
 
-        # Load the message class, propagating any exceptions from bad msg types
-        msg_class = ros_loader.get_message_class(msg_type)
+        if msg_type == "__AnyMsg":
+            msg_class = AnyMsg
+        else:
+            # Load the message class, propagating any exceptions from bad msg types
+            msg_class = ros_loader.get_message_class(msg_type)
 
-        # Make sure the specified msg type and established msg type are same
-        if topic_type is not None and topic_type != msg_class._type:
-            raise TypeConflictException(topic, topic_type, msg_class._type)
+            # Make sure the specified msg type and established msg type are same
+            if topic_type is not None and topic_type != msg_class._type:
+                raise TypeConflictException(topic, topic_type, msg_class._type)
 
         # Create the subscriber and associated member variables
         self.subscriptions = {}
@@ -109,10 +114,11 @@ class MultiSubscriber():
         this publisher
 
         """
+        if msg_type == "__AnyMsg":
+            return
         if not ros_loader.get_message_class(msg_type) is self.msg_class:
             raise TypeConflictException(self.topic,
                                         self.msg_class._type, msg_type)
-        return
 
     def subscribe(self, client_id, callback):
         """ Subscribe the specified client to this subscriber.
@@ -143,41 +149,32 @@ class MultiSubscriber():
     def has_subscribers(self):
         """ Return true if there are subscribers """
         with self.lock:
-            ret = len(self.subscriptions) != 0
-            return ret
+            return len(self.subscriptions) != 0
 
     def callback(self, msg, callbacks=None):
         """ Callback for incoming messages on the rospy.Subscriber
 
-        Converts the incoming msg to JSON, then passes the JSON to the
-        registered subscriber callbacks.
+        Passes the message to registered subscriber callbacks.
 
         Keyword Arguments:
         msg - the ROS message coming from the subscriber
         callbacks - subscriber callbacks to invoke
 
         """
-        # Try to convert the msg to JSON
-        json = None
-        try:
-            json = message_conversion.extract_values(msg)
-        except Exception as exc:
-            logerr("Exception while converting messages in subscriber callback : %s", exc)
-            return
-        
+        outgoing = OutgoingMessage(msg)
+
         # Get the callbacks to call
         if not callbacks:
             with self.lock:
-                callbacks = self.subscriptions.values()
+                callbacks = list(self.subscriptions.values())
 
         # Pass the JSON to each of the callbacks
         for callback in callbacks:
             try:
-                callback(json)
+                callback(outgoing)
             except Exception as exc:
                 # Do nothing if one particular callback fails except log it
                 logerr("Exception calling subscribe callback: %s", exc)
-                pass
 
 
 class SubscriberManager():
@@ -186,6 +183,7 @@ class SubscriberManager():
     """
 
     def __init__(self):
+        self._lock = Lock()
         self._subscribers = {}
 
     def subscribe(self, client_id, topic, callback, msg_type=None):
@@ -198,13 +196,14 @@ class SubscriberManager():
         msg_type  -- (optional) the type of the topic
 
         """
-        if not topic in self._subscribers:
-            self._subscribers[topic] = MultiSubscriber(topic, msg_type)
+        with self._lock:
+            if not topic in self._subscribers:
+                self._subscribers[topic] = MultiSubscriber(topic, msg_type)
 
-        if msg_type is not None:
-            self._subscribers[topic].verify_type(msg_type)
+            if msg_type is not None:
+                self._subscribers[topic].verify_type(msg_type)
 
-        self._subscribers[topic].subscribe(client_id, callback)
+            self._subscribers[topic].subscribe(client_id, callback)
 
     def unsubscribe(self, client_id, topic):
         """ Unsubscribe from a topic
@@ -214,14 +213,12 @@ class SubscriberManager():
         topic     -- the topic to unsubscribe from
 
         """
-        if not topic in self._subscribers:
-            return
+        with self._lock:
+            self._subscribers[topic].unsubscribe(client_id)
 
-        self._subscribers[topic].unsubscribe(client_id)
-
-        if not self._subscribers[topic].has_subscribers():
-            self._subscribers[topic].unregister()
-            del self._subscribers[topic]
+            if not self._subscribers[topic].has_subscribers():
+                self._subscribers[topic].unregister()
+                del self._subscribers[topic]
 
 
 manager = SubscriberManager()

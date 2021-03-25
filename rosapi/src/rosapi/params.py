@@ -67,7 +67,7 @@ def get_param(name, default, params_glob):
     # If the glob list is empty (i.e. false) or the parameter matches
     # one of the glob strings, continue to get the parameter.
     d = None
-    if default is not "":
+    if default != "":
         try:
             d = loads(default)
         except ValueError:
@@ -98,7 +98,7 @@ def delete_param(name, params_glob):
             rospy.delete_param(name)
 
 def search_param(name, params_glob):
-    if params_glob and not any(fnmatch.fnmatch(str(v), glob) for glob in params_glob):
+    if params_glob and not any(fnmatch.fnmatch(str(name), glob) for glob in params_glob):
         # If the glob list is not empty and there are no glob matches,
         # stop the attempt to find the parameter.
         return None
@@ -110,7 +110,7 @@ def get_param_names(params_glob):
     with param_server_lock:
         if params_glob:
             # If there is a parameter glob, filter by it.
-            return filter(lambda x: any(fnmatch.fnmatch(str(x), glob) for glob in params_glob), rospy.get_param_names())
+            return list(filter(lambda x: any(fnmatch.fnmatch(str(x), glob) for glob in params_glob), rospy.get_param_names()))
         else:
             # If there is no parameter glob, don't filter.
             return rospy.get_param_names()
