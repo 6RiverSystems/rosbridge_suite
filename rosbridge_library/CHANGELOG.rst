@@ -2,6 +2,124 @@
 Changelog for package rosbridge_library
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+1.1.1 (2021-12-09)
+------------------
+* Allow subscribing to any qos profile when creating a subscriber (`#690 <https://github.com/RobotWebTools/rosbridge_suite/issues/690>`_)
+* Fix and add test for multiple subscribers to same topic (`#687 <https://github.com/RobotWebTools/rosbridge_suite/issues/687>`_)
+* Fix error when advertising duplicate service (`#683 <https://github.com/RobotWebTools/rosbridge_suite/issues/683>`_)
+* Fix incoming service calls (`#669 <https://github.com/RobotWebTools/rosbridge_suite/issues/669>`_)
+* Replace busy wait in AdvertiseService with async handler (`#666 <https://github.com/RobotWebTools/rosbridge_suite/issues/666>`_)
+* Contributors: Domenic Rodriguez, Jacob Bandes-Storch, Roman Shtylman
+
+1.1.0 (2021-10-22)
+------------------
+* Fix test imports from rosbridge_test_msgs (`#668 <https://github.com/RobotWebTools/rosbridge_suite/issues/668>`_)
+* Move msg/srv from rosapi and rosbridge_library into separate packages; enable Rolling in CI (`#665 <https://github.com/RobotWebTools/rosbridge_suite/issues/665>`_)
+* Fix test_services.py (`#653 <https://github.com/RobotWebTools/rosbridge_suite/issues/653>`_)
+* Fix unused variables: flake8 --select=F841 (`#623 <https://github.com/RobotWebTools/rosbridge_suite/issues/623>`_)
+* Remove get_service_instance from ros_loader (`#647 <https://github.com/RobotWebTools/rosbridge_suite/issues/647>`_)
+* Fix test settings for rosbridge_library (`#643 <https://github.com/RobotWebTools/rosbridge_suite/issues/643>`_)
+* Fix DOS line endings (`#658 <https://github.com/RobotWebTools/rosbridge_suite/issues/658>`_)
+* Port `#464 <https://github.com/RobotWebTools/rosbridge_suite/issues/464>`_, `#478 <https://github.com/RobotWebTools/rosbridge_suite/issues/478>`_, `#496 <https://github.com/RobotWebTools/rosbridge_suite/issues/496>`_, and `#502 <https://github.com/RobotWebTools/rosbridge_suite/issues/502>`_ from ROS1 branch (`#663 <https://github.com/RobotWebTools/rosbridge_suite/issues/663>`_)
+* Add pre-commit, format with black and isort (`#648 <https://github.com/RobotWebTools/rosbridge_suite/issues/648>`_)
+* Contributors: Adrian Macneil, Christian Clauss, Domenic Rodriguez, Jacob Bandes-Storch, Kenji Miyake
+
+1.0.8 (2021-08-26)
+------------------
+* Fix various Python code style and lint issues
+* Contributors: Christian Clauss, Jacob Bandes-Storch
+
+1.0.7 (2021-08-18)
+------------------
+* Fix typos discovered by codespell (`#600 <https://github.com/RobotWebTools/rosbridge_suite/issues/600>`_)
+* Contributors: Christian Clauss
+
+1.0.6 (2021-08-17)
+------------------
+* Fix broken links in changelogs
+* Contributors: Jacob Bandes-Storch
+
+1.0.5 (2021-08-12)
+------------------
+
+1.0.4 (2021-08-11)
+------------------
+
+1.0.3 (2021-08-03)
+------------------
+* Add cbor-raw compression support (`#574 <https://github.com/RobotWebTools/rosbridge_suite/issues/574>`_, adapted from ROS 1 implementation `#452 <https://github.com/RobotWebTools/rosbridge_suite/issues/452>`_)
+* Adaptations to Eloquent [Again] (`#533 <https://github.com/RobotWebTools/rosbridge_suite/issues/533>`_)
+  * increase spin period to 1000Hz to allow 1000 messages per second into the websocket
+  * allow interpreting int as float when needed
+  * better handling array.array and numpy arrays
+  * allow bytes and str websocket messages
+  * add boolean type
+  * handle type extraction of static array rostypes
+  * missing cls variable
+  Co-authored-by: Maximilian Matthe <maxi.matthe@googlemail.com>
+  Co-authored-by: CoRoLa generic <corola@bi>
+  Co-authored-by: joshwapohlmann <joshwa.pohlmann@barkhauseninstitut.org>
+* Fix for type error caused by appending byte arrays to empty string buffer (`#507 <https://github.com/RobotWebTools/rosbridge_suite/issues/507>`_)
+* Contributors: Connor Brooks, Jacob Bandes-Storch, travipross
+
+1.0.2 (2019-09-24)
+------------------
+* use Python 3 dependency keys (`#436 <https://github.com/RobotWebTools/rosbridge_suite/issues/436>`_)
+
+1.0.1 (2019-09-20)
+------------------
+
+1.0.0 (2019-09-19)
+------------------
+* Port to ROS 2
+
+0.11.3 (2019-08-07)
+-------------------
+
+0.11.2 (2019-07-08)
+-------------------
+
+0.11.1 (2019-05-08)
+-------------------
+* fixed logwarn msg formatting in publishers (`#398 <https://github.com/RobotWebTools/rosbridge_suite/issues/398>`_)
+* Contributors: Gautham P Das
+
+0.11.0 (2019-03-29)
+-------------------
+* BSON can send Nan and Inf (`#391 <https://github.com/RobotWebTools/rosbridge_suite/issues/391>`_)
+* Contributors: akira_you
+
+0.10.2 (2019-03-04)
+-------------------
+* Fix typo (`#379 <https://github.com/RobotWebTools/rosbridge_suite/issues/379>`_)
+* Contributors: David Weis
+
+0.10.1 (2018-12-16)
+-------------------
+* Inline cbor library (`#377 <https://github.com/RobotWebTools/rosbridge_suite/issues/377>`_)
+  Prefer system version with C speedups, but include pure Python implementation.
+* Contributors: Matt Vollrath
+
+0.10.0 (2018-12-14)
+-------------------
+* CBOR encoding (`#364 <https://github.com/RobotWebTools/rosbridge_suite/issues/364>`_)
+  * Add CBOR encoding
+  * Fix value extraction performance regression
+  Extract message values once per message.
+  * Fix typed array tags
+  Was using big-endian tags and encoding little-endian.
+  Always use little-endian for now since Intel is prevalent for desktop.
+  Add some comments to this effect.
+  * Update CBOR protocol documentation
+  More information about draft typed arrays and when to use CBOR.
+  * Fix 64-bit integer CBOR packing
+  Use an actual 64-bit format.
+* use package format 2, remove unnecessary dependencies (`#348 <https://github.com/RobotWebTools/rosbridge_suite/issues/348>`_)
+* removing has_key for python3, keeping backwards compatibility (`#337 <https://github.com/RobotWebTools/rosbridge_suite/issues/337>`_)
+  * removing has_key for python3, keeping backwards compatibility
+  * py3 change for itervalues, keeping py2 compatibility
+* Contributors: Andreas Klintberg, Dirk Thomas, Matt Vollrath
+
 0.9.0 (2018-04-09)
 ------------------
 * Fix typo in function call
@@ -116,7 +234,7 @@ Changelog for package rosbridge_library
 * correct default values for security globs
   also accept empty list as the default "do not check globs" value in addition to None.
   Finally, append rosapi service glob after processing command line input so it's not overwritten
-* Added services_glob to CallServices, added globs to rosbridge_tcp and rosbridge_udp, and other miscellanous fixes.
+* Added services_glob to CallServices, added globs to rosbridge_tcp and rosbridge_udp, and other miscellaneous fixes.
 * As per the suggestions of @T045T, fixed several typos, improved logging, and made some style fixes.
 * Added new parameters for topic and service security.
   Added 3 new parameters to rosapi and rosbridge_server which filter the
@@ -315,7 +433,7 @@ Changelog for package rosbridge_library
 ------------------
 * removing wrong import
 * test case for fixed size of uint8 array
-* uses regular expresion to match uint8 array and char array.
+* uses regular expression to match uint8 array and char array.
 * logerr when it fails while message_conversion
 * Contributors: Jihoon Lee
 
@@ -358,7 +476,7 @@ Changelog for package rosbridge_library
 * updated websocket test service server script to use websocket
 * added files to test new caps with websocket server
 * feierabend.. morgen weiter mit server & client JSON-decoder, see notes
-* fixed parsing of incomplete/multiple JSON in incoming buffer; so clients do not need to use an intervall when sending to rosbridge
+* fixed parsing of incomplete/multiple JSON in incoming buffer; so clients do not need to use an interval when sending to rosbridge
 * only current changes; not yet done..
 * code cleanup, not yet finished..; rosbridge logging much cleaner now
 * fixed test_server_defragment - recodegit status
@@ -369,7 +487,7 @@ Changelog for package rosbridge_library
 * blocking behavior for service requests to non-ros; test-scripts use get-ip4 helper function; ..needs a lot cleanup before next steps..
 * need to implement server side blocking of multiple requests, to keep implementation of service provider as easy and simple as possible
 * not finished
-* some changes.. still needs serveral fixes
+* some changes.. still needs several fixes
 * unique request_ids
 * fixed deserialization of multiple fragments in incoming-data; was caused by too short delay between socket-sends (<0.2 seconds); maybe only temp. fixed
 * added fragment sorting to test-client and test-server
@@ -456,7 +574,7 @@ Changelog for package rosbridge_library
 * Adds BSD license header to code files.
   See Issue `#13 <https://github.com/RobotWebTools/rosbridge_suite/issues/13>`_.
 * Removing ultrajson from rosbridge.
-  If JSON parsing becomes a performance bottle neck, we can readd it.
+  If JSON parsing becomes a performance bottle neck, we can re-add it.
 * Catkinizing rosbridge_library and server.
 * PNG compression now creates a square RGB image padded with new-line characters
 * Add stack dependencies and rosdeps.

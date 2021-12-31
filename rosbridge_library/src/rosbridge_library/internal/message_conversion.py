@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Software License Agreement (BSD License)
 #
 # Copyright (c) 2012, Willow Garage, Inc.
@@ -31,121 +31,203 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import print_function
-import roslib
-import rospy
-
-from rosbridge_library.internal import ros_loader
-
+import array
 import math
 import re
-import string
-from base64 import standard_b64encode, standard_b64decode
+from base64 import standard_b64decode, standard_b64encode
 
-from rosbridge_library.util import string_types, bson
+import numpy as np
+import rclpy
+from rcl_interfaces.msg import Parameter
+from rclpy.clock import ROSClock
+from rosbridge_library.internal import ros_loader
+from rosbridge_library.util import bson
 
-import sys
-if sys.version_info >= (3, 0):
-    type_map = {
-    "bool":    ["bool"],
-    "int":     ["int8", "byte", "uint8", "char",
-                "int16", "uint16", "int32", "uint32",
-                "int64", "uint64", "float32", "float64"],
-    "float":   ["float32", "float64"],
-    "str":     ["string"]
-    }
-    primitive_types = [bool, int, float]
-    python2 = False
-else:
-    type_map = {
-    "bool":    ["bool"],
-    "int":     ["int8", "byte", "uint8", "char",
-                "int16", "uint16", "int32", "uint32",
-                "int64", "uint64", "float32", "float64"],
-    "float":   ["float32", "float64"],
-    "str":     ["string"],
-    "unicode": ["string"],
-    "long":    ["int64", "uint64"]
-    }
-    primitive_types = [bool, int, long, float]
-    python2 = True
+try:
+    import rospy
+except ImportError:
+    rospy = None
 
-list_types = [list, tuple]
-ros_time_types = ["time", "duration"]
-ros_primitive_types = ["bool", "byte", "char", "int8", "uint8", "int16",
-                       "uint16", "int32", "uint32", "int64", "uint64",
-                       "float32", "float64", "string"]
+type_map = {
+    "bool": ["bool", "boolean"],
+    "int": [
+        "int8",
+        "octet",
+        "uint8",
+        "char",
+        "int16",
+        "uint16",
+        "int32",
+        "uint32",
+        "int64",
+        "uint64",
+        "float32",
+        "float64",
+    ],
+    "float": ["float32", "float64", "double", "float"],
+    "str": ["string"],
+}
+primitive_types = [bool, int, float]
+
+list_types = [list, tuple, np.ndarray, array.array]
+ros_time_types = ["builtin_interfaces/Time", "builtin_interfaces/Duration"]
+ros_primitive_types = [
+    "bool",
+    "boolean",
+    "octet",
+    "char",
+    "int8",
+    "uint8",
+    "int16",
+    "uint16",
+    "int32",
+    "uint32",
+    "int64",
+    "uint64",
+    "float32",
+    "float64",
+    "float",
+    "double",
+    "string",
+]
 ros_header_types = ["Header", "std_msgs/Header", "roslib/Header"]
 ros_binary_types = ["uint8[]", "char[]"]
-list_braces = re.compile(r'\[[^\]]*\]')
-ros_binary_types_list_braces = [("uint8[]", re.compile(r'uint8\[[^\]]*\]')),
-                                ("char[]", re.compile(r'char\[[^\]]*\]'))]
+list_tokens = re.compile("<(.+?)>")
+bounded_array_tokens = re.compile(r"(.+)\[.*\]")
+ros_binary_types_list_braces = [
+    ("uint8[]", re.compile(r"uint8\[[^\]]*\]")),
+    ("char[]", re.compile(r"char\[[^\]]*\]")),
+]
 
 binary_encoder = None
+binary_encoder_type = "default"
+bson_only_mode = False
+
+
+# TODO(@jubeira): configure module with a node handle.
+# The original code doesn't seem to actually use these parameters.
+def configure(node_handle=None):
+    global binary_encoder, binary_encoder_type, bson_only_mode
+
+    if node_handle is not None:
+        binary_encoder_type = node_handle.get_parameter_or(
+            "binary_encoder", Parameter("", value="default")
+        ).value
+        bson_only_mode = node_handle.get_parameter_or(
+            "bson_only_mode", Parameter("", value=False)
+        ).value
+
+    if binary_encoder is None:
+        if binary_encoder_type == "bson" or bson_only_mode:
+            binary_encoder = bson.Binary
+        elif binary_encoder_type == "default" or binary_encoder_type == "b64":
+            binary_encoder = standard_b64encode
+        else:
+            print("Unknown encoder type '%s'" % binary_encoder_type)
+            exit(0)
+
 
 def get_encoder():
-    global binary_encoder
-    if binary_encoder is None:
-        binary_encoder_type = rospy.get_param('~binary_encoder', 'default')
-        bson_only_mode = rospy.get_param('~bson_only_mode', False)
-
-        if binary_encoder_type == 'bson' or bson_only_mode:
-            binary_encoder = bson.Binary
-        elif binary_encoder_type == 'default' or binary_encoder_type == 'b64':
-             binary_encoder = standard_b64encode
-        else:
-            print("Unknown encoder type '%s'"%binary_encoder_type)
-            exit(0)
+    configure()
     return binary_encoder
+
 
 class InvalidMessageException(Exception):
     def __init__(self, inst):
-        Exception.__init__(self, "Unable to extract message values from %s instance" % type(inst).__name__)
+        Exception.__init__(
+            self,
+            "Unable to extract message values from %s instance" % type(inst).__name__,
+        )
 
 
 class NonexistentFieldException(Exception):
     def __init__(self, basetype, fields):
-        Exception.__init__(self, "Message type %s does not have a field %s" % (basetype, '.'.join(fields)))
+        Exception.__init__(
+            self,
+            "Message type {} does not have a field {}".format(basetype, ".".join(fields)),
+        )
 
 
 class FieldTypeMismatchException(Exception):
     def __init__(self, roottype, fields, expected_type, found_type):
         if roottype == expected_type:
-            Exception.__init__(self, "Expected a JSON object for type %s but received a %s" % (roottype, found_type))
+            Exception.__init__(
+                self,
+                f"Expected a JSON object for type {roottype} but received a {found_type}",
+            )
         else:
-            Exception.__init__(self, "%s message requires a %s for field %s, but got a %s" % (roottype, expected_type, '.'.join(fields), found_type))
+            Exception.__init__(
+                self,
+                "{} message requires a {} for field {}, but got a {}".format(
+                    roottype, expected_type, ".".join(fields), found_type
+                ),
+            )
 
 
 def extract_values(inst):
-    rostype = getattr(inst, "_type", None)
+    rostype = msg_instance_type_repr(inst)
     if rostype is None:
         raise InvalidMessageException(inst=inst)
     return _from_inst(inst, rostype)
 
 
 def populate_instance(msg, inst):
-    """ Returns an instance of the provided class, with its fields populated
-    according to the values in msg """
-    return _to_inst(msg, inst._type, inst._type, inst)
+    """Returns an instance of the provided class, with its fields populated
+    according to the values in msg"""
+    inst_type = msg_instance_type_repr(inst)
+
+    return _to_inst(msg, inst_type, inst_type, inst)
+
+
+def msg_instance_type_repr(msg_inst):
+    """Returns a string representation of a ROS2 message type from a message instance"""
+    # Message representation: '{package}.msg.{message_name}({fields})'.
+    # A representation like '_type' member in ROS1 messages is needed: '{package}/{message_name}'.
+    # E.g: 'std_msgs/Header'
+    msg_type = type(msg_inst)
+    if msg_type in primitive_types or msg_type in list_types:
+        return str(type(msg_inst))
+    inst_repr = str(msg_inst).split(".")
+    return "{}/{}".format(inst_repr[0], inst_repr[2].split("(")[0])
+
+
+def msg_class_type_repr(msg_class):
+    """Returns a string representation of a ROS2 message type from a class representation."""
+    # The string representation of the class is <class '{package}.msg._{message}.{Message}'>
+    # (e.g. <class 'std_msgs.msg._string.String'>).
+    # This has to be converted to {package}/msg/{Message} (e.g. std_msgs/msg/String).
+    class_repr = str(msg_class).split("'")[1].split(".")
+    return f"{class_repr[0]}/{class_repr[1]}/{class_repr[3]}"
 
 
 def _from_inst(inst, rostype):
+    global bson_only_mode
     # Special case for uint8[], we encode the string
     for binary_type, expression in ros_binary_types_list_braces:
         if expression.sub(binary_type, rostype) in ros_binary_types:
             encoded = get_encoder()(inst)
-            return encoded if python2 else encoded.decode('ascii')
+            return encoded.decode("ascii")
 
     # Check for time or duration
     if rostype in ros_time_types:
-        return {"secs": inst.secs, "nsecs": inst.nsecs}
+        try:
+            return {"sec": inst.sec, "nanosec": inst.nanosec}
+        except AttributeError:
+            return {"secs": inst.secs, "nsecs": inst.nsecs}
 
+    if bson_only_mode is None:
+        bson_only_mode = rospy.get_param("~bson_only_mode", False)
     # Check for primitive types
     if rostype in ros_primitive_types:
-        #JSON does not support Inf and NaN. They are mapped to None and encoded as null.
-        if rostype in ["float32", "float64"]:
+        # JSON does not support Inf and NaN. They are mapped to None and encoded as null
+        if (not bson_only_mode) and (rostype in type_map.get("float")):
             if math.isnan(inst) or math.isinf(inst):
                 return None
+
+        # JSON does not support byte array. They are converted to int
+        if (not bson_only_mode) and (rostype == "octet"):
+            return int.from_bytes(inst, "little")
+
         return inst
 
     # Check if it's a list or tuple
@@ -162,10 +244,13 @@ def _from_list_inst(inst, rostype):
         return []
 
     # Remove the list indicators from the rostype
-    rostype = list_braces.sub("", rostype)
+    try:
+        rostype = re.search(list_tokens, rostype).group(1)
+    except AttributeError:
+        rostype = re.search(bounded_array_tokens, rostype).group(1)
 
     # Shortcut for primitives
-    if rostype in ros_primitive_types and not rostype in ["float32", "float64"]:
+    if rostype in ros_primitive_types and rostype not in type_map.get("float"):
         return list(inst)
 
     # Call to _to_inst for every element of the list
@@ -175,7 +260,8 @@ def _from_list_inst(inst, rostype):
 def _from_object_inst(inst, rostype):
     # Create an empty dict then populate with values from the inst
     msg = {}
-    for field_name, field_rostype in zip(inst.__slots__, inst._slot_types):
+    # Equivalent for zip(inst.__slots__, inst._slot_types) in ROS1:
+    for field_name, field_rostype in inst.get_fields_and_field_types().items():
         field_inst = getattr(inst, field_name)
         msg[field_name] = _from_inst(field_inst, field_rostype)
     return msg
@@ -207,33 +293,28 @@ def _to_inst(msg, rostype, roottype, inst=None, stack=[]):
 
 
 def _to_binary_inst(msg):
-    if type(msg) in string_types:
-        try:
-            return standard_b64decode(msg)
-        except :
-            return msg
-    else:
-        try:
-            return bytes(bytearray(msg))
-        except:
-            return msg
+    try:
+        return standard_b64decode(msg) if isinstance(msg, str) else bytes(bytearray(msg))
+    except Exception:
+        return msg
 
 
 def _to_time_inst(msg, rostype, inst=None):
     # Create an instance if we haven't been provided with one
+
     if rostype == "time" and msg == "now":
-        return rospy.get_rostime()
+        return ROSClock().now().to_msg()
 
     if inst is None:
         if rostype == "time":
-            inst = rospy.rostime.Time()
+            inst = rclpy.time.Time().to_msg()
         elif rostype == "duration":
-            inst = rospy.rostime.Duration()
+            inst = rclpy.duration.Duration().to_msg()
         else:
             return None
 
-    # Copy across the fields
-    for field in ["secs", "nsecs"]:
+    # Copy across the fields, try ROS1 and ROS2 fieldnames
+    for field in ["secs", "nsecs", "sec", "nanosec"]:
         try:
             if field in msg:
                 setattr(inst, field, msg[field])
@@ -245,11 +326,20 @@ def _to_time_inst(msg, rostype, inst=None):
 
 def _to_primitive_inst(msg, rostype, roottype, stack):
     # Typecheck the msg
+    if isinstance(msg, int) and rostype in type_map["float"]:
+        # probably wrong parsing,
+        # fix that by casting the int to the expected float
+        msg = float(msg)
+
+    # Convert to byte
+    if rostype == "octet" and isinstance(msg, int):
+        return bytes([msg])
+
     msgtype = type(msg)
     if msgtype in primitive_types and rostype in type_map[msgtype.__name__]:
         return msg
-    elif msgtype in string_types and rostype in type_map[msgtype.__name__]:
-        return msg.encode("utf-8", "ignore") if python2 else msg
+    elif isinstance(msg, str) and rostype in type_map[msgtype.__name__]:
+        return msg
     raise FieldTypeMismatchException(roottype, stack, rostype, msgtype)
 
 
@@ -262,40 +352,43 @@ def _to_list_inst(msg, rostype, roottype, inst, stack):
     if len(msg) == 0:
         return []
 
+    if isinstance(inst, np.ndarray):
+        return list(inst.astype(float))
+
     # Remove the list indicators from the rostype
-    rostype = list_braces.sub("", rostype)
+    try:
+        rostype = re.search(list_tokens, rostype).group(1)
+    except AttributeError:
+        rostype = re.search(bounded_array_tokens, rostype).group(1)
 
     # Call to _to_inst for every element of the list
     return [_to_inst(x, rostype, roottype, None, stack) for x in msg]
 
 
 def _to_object_inst(msg, rostype, roottype, inst, stack):
+
     # Typecheck the msg
-    if type(msg) is not dict:
+    if not isinstance(msg, dict):
         raise FieldTypeMismatchException(roottype, stack, rostype, type(msg))
 
     # Substitute the correct time if we're an std_msgs/Header
-    try:
-        if rostype in ros_header_types:
-            inst.stamp = rospy.get_rostime()
-    except rospy.exceptions.ROSInitException as e:
-        rospy.logdebug("Not substituting the correct header time: %s" % e)
+    if rostype in ros_header_types:
+        inst.stamp = ROSClock().now().to_msg()
 
-    inst_fields = dict(zip(inst.__slots__, inst._slot_types))
+    inst_fields = inst.get_fields_and_field_types()
 
     for field_name in msg:
         # Add this field to the field stack
         field_stack = stack + [field_name]
 
         # Raise an exception if the msg contains a bad field
-        if not field_name in inst_fields:
+        if field_name not in inst_fields:
             raise NonexistentFieldException(roottype, field_stack)
 
         field_rostype = inst_fields[field_name]
         field_inst = getattr(inst, field_name)
 
-        field_value = _to_inst(msg[field_name], field_rostype,
-                    roottype, field_inst, field_stack)
+        field_value = _to_inst(msg[field_name], field_rostype, roottype, field_inst, field_stack)
 
         setattr(inst, field_name, field_value)
 

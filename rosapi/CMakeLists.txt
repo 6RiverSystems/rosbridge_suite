@@ -1,50 +1,27 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(rosapi)
 
-find_package(catkin REQUIRED COMPONENTS rospy message_generation)
-catkin_python_setup()
+find_package(ament_cmake_ros REQUIRED)
 
-add_message_files(
-  FILES
-  TypeDef.msg
-)
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
 
-add_service_files(
-  FILES
-  DeleteParam.srv
-  GetActionServers.srv
-  GetParam.srv
-  GetParamNames.srv
-  GetTime.srv
-  HasParam.srv
-  MessageDetails.srv
-  Nodes.srv
-  NodeDetails.srv
-  Publishers.srv
-  SearchParam.srv
-  ServiceHost.srv
-  ServiceNode.srv
-  ServiceProviders.srv
-  ServiceRequestDetails.srv
-  ServiceResponseDetails.srv
-  Services.srv
-  ServicesForType.srv
-  ServiceType.srv
-  SetParam.srv
-  Subscribers.srv
-  Topics.srv
-  TopicsForType.srv
-  TopicType.srv
-)
+ament_python_install_package(
+  ${PROJECT_NAME} PACKAGE_DIR "src/${PROJECT_NAME}")
 
-generate_messages(
-  DEPENDENCIES
-)
-
-catkin_package(
-  CATKIN_DEPENDS message_runtime
-)
+ament_package()
 
 install(PROGRAMS scripts/rosapi_node
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  DESTINATION lib/${PROJECT_NAME}
 )
+
+install(
+  FILES mapping_rules.yaml
+  DESTINATION share/${PROJECT_NAME}
+)
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(${PROJECT_NAME}_test_stringify_field_types test/test_stringify_field_types.py)
+endif()

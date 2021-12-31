@@ -1,4 +1,4 @@
-rosbridge_suite [![Build Status](https://api.travis-ci.org/RobotWebTools/rosbridge_suite.png)](https://travis-ci.org/RobotWebTools/rosbridge_suite)
+rosbridge_suite
 ===============
 
 #### Server Implementations of the rosbridge v2 Protocol
@@ -25,9 +25,17 @@ A rosbridge client is a program that communicates with rosbridge using its JSON 
 
  * [roslibjs](https://github.com/RobotWebTools/roslibjs) - A JavaScript API, which communicates with rosbridge over WebSockets.
  * [jrosbridge](https://github.com/WPI-RAIL/jrosbridge) - A Java API, which communicates with rosbridge over WebSockets.
+ * [roslibpy](https://github.com/gramaziokohler/roslibpy) - A Python API, which communicates with rosbridge over WebSockets.
 
 ### License
 rosbridge_suite is released with a BSD license. For full terms and conditions, see the [LICENSE](LICENSE) file.
 
 ### Authors
 See the [AUTHORS](AUTHORS.md) file for a full list of contributors.
+
+### Quality Declaration
+This package claims to be in the **Quality Level 3** category, see the [Quality Declaration](/QUALITY_DECLARATION.md) for more details.
+
+### Troubleshooting
+
+See the [TROUBLESHOOTING](TROUBLESHOOTING.md) doc for common problems and solutions.

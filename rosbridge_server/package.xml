@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>rosbridge_server</name>
-  <version>0.9.0</version>
+  <version>1.1.1</version>
   <description>A WebSocket interface to rosbridge.</description>
 
   <license>BSD</license>
@@ -11,8 +11,8 @@
   <url type="repository">https://github.com/RobotWebTools/rosbridge_suite</url>
 
   <author email="jonathan.c.mace@gmail.com">Jonathan Mace</author>
-  <maintainer email="rctoris@wpi.edu">Russell Toris</maintainer>
   <maintainer email="jihoonlee.in@gmail.com">Jihoon Lee</maintainer>
+  <maintainer email="jacob@foxglove.dev">Jacob Bandes-Storch</maintainer>
 
   <buildtool_depend>catkin</buildtool_depend>
   <exec_depend>python-backports.ssl-match-hostname</exec_depend>

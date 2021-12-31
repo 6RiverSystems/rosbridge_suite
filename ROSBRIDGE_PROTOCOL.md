@@ -141,7 +141,7 @@ concatenated, resulting in the JSON string of the original message.
 
 #### 3.1.2 PNG compression ( _png_ ) [experimental]
 
-Some messages (such as point clouds) can be extremely large, and for efficiency
+Some messages (such as images and maps) can be extremely large, and for efficiency
 reasons we may wish to transfer them as PNG-encoded bytes. The PNG opcode
 duplicates the fragmentation logic of the FRG opcode (and it is possible and
 reasonable to only have a single fragment), except that the data field consists
@@ -167,6 +167,50 @@ message and read the bytes of the string into a PNG image. Then, ASCII-encode
 the image. This string is now used as the data field. If fragmentation is
 necessary, then fragment the data and set the ID, num and total fields to the
 appropriate values in the fragments. Otherwise these fields can be left out.
+
+#### 3.1.3 CBOR encoding ( _cbor_ )
+
+[CBOR](https://tools.ietf.org/html/rfc7049) encoding is the fastest
+compression method for messages containing large blobs of data, such as
+byte arrays and numeric typed arrays.
+
+When CBOR compression is requested by a subscriber, a binary message will be
+produced instead of a JSON string.  Once decoded, the message will contain
+a normal protocol message.
+
+The implementation uses [draft typed array tags] for efficient packing of
+homogeneous arrays.  At the moment, only little-endian packing is supported.
+
+[draft typed array tags]: https://tools.ietf.org/html/draft-ietf-cbor-array-tags-00
+
+#### 3.1.4 CBOR-RAW encoding ( _cbor-raw_ )
+
+While CBOR encodes the entire message as CBOR, sometimes it's desirable to get the raw binary message in the
+[ROS serialization format](https://wiki.ros.org/roscpp/Overview/MessagesSerializationAndAdaptingTypes),
+which is the same format as sent between ROS nodes and stored in [Bag files](http://wiki.ros.org/Bags/Format/2.0).
+
+This can be useful in several cases:
+- Your application already knows how to parse messages in bag files (e.g. using
+  [rosbag.js](https://github.com/cruise-automation/rosbag.js), which means that now you can use
+  consistent code paths for both bags and live messages.
+- You want to parse messages as late as possible, or in parallel, e.g. only in the thread
+  or WebWorker that cares about the message. Delaying the parsing of the message means that moving
+  or copying the message to the thread is cheaper when its in binary form, since no serialization
+  between threads is necessary.
+- You only care about part of the message, and don't need to parse the rest of it.
+- You really care about performance; no conversion between the ROS binary format and CBOR is done in
+  the rosbridge_sever.
+
+The format is similar to CBOR above, but instead of the "msg" field containing the message itself
+in CBOR format, instead it contains an object with a "bytes" field which is a byte array containing
+the raw message. The "msg" object also includes "secs" and "nsecs" of the `get_rostime()` upon
+receiving the message, which is especially useful when `use_sim_time` is set, since it will give you
+the simulated time the message was received.
+
+When using this encoding, a client application will need to know exactly how to parse the raw
+message. For this it's useful to use the `/rosapi/get_topics_and_raw_types` service, which will give
+you all topics and their raw message definitions, similar to `gendeps --cat`. This is the same
+format as used by bag files.
 
 ### 3.2 Status messages
 
@@ -217,24 +261,24 @@ message is dropped.
 
 Optional authentication information can be passed via the rosbridge protocol
 to authenticate a client connection. This information should come from some
-trusted third-party authenticator. 
+trusted third-party authenticator.
 
 Authentication is based on the MAC (message authentication code) scheme. The
 key to using MAC is that it does not tie users to a single "user database."
 It simply requires some trusted third-party to provide the hash-keys.
 
-#### 3.3.1 Authenticate ( _auth_ )
+#### 3.3.1 Authenticate ( _auth_, ROS 1 only )
 
 To send authentication credentials, use the auth command.
 
 ```json
-{ "op": "auth", 
-  "mac": <string>, 
-  "client": <string>, 
-  "dest": <string>, 
-  "rand": <string>, 
-  "t": <int>, 
-  "level": <string>, 
+{ "op": "auth",
+  "mac": <string>,
+  "client": <string>,
+  "dest": <string>,
+  "rand": <string>,
+  "t": <int>,
+  "level": <string>,
   "end": <int>
 }
 ```
@@ -248,15 +292,15 @@ To send authentication credentials, use the auth command.
  * **end** – end time of the client's session
 
    * Any server that enabled authentication should wait for
-     this request to come in first before accepting any other 
+     this request to come in first before accepting any other
      `op` code from the client.
-   * Once the request comes in, it would verify the information 
+   * Once the request comes in, it would verify the information
      (in a ROS system, using `rosauth`; however, the verification
-     method is not tied to ROS). 
+     method is not tied to ROS).
    * If the authentication is good, the connection would be kept
      and rosbridge would function as normal. If the authentication
-     is bad, the connection would be severed. 
-   * In the case that authentication is not enabled on the server, 
+     is bad, the connection would be severed.
+   * In the case that authentication is not enabled on the server,
      this `op` code can be ignored.
 
 ### 3.4 ROS messages
@@ -286,8 +330,8 @@ the advertise command.
      is sent and this message is dropped.
    * If the topic already exists with the same type, the sender of this message
      is registered as another publisher.
-   * If the topic doesnt already exist but the type cannot be resolved, then an
-     error status message is sent and this message is dropped.
+   * If the topic doesn't already exist but the type cannot be resolved, then
+     an error status message is sent and this message is dropped.
 
 #### 3.4.2 Unadvertise ( _unadvertise_ )
 
@@ -372,7 +416,7 @@ which to send messages.
  * **fragment_size** – the maximum size that a message can take before it is to
     be fragmented.
  * **compression** – an optional string to specify the compression scheme to be
-    used on messages. Valid values are "none" and "png"
+    used on messages. Valid values are "none", "png", "cbor", and "cbor-raw".
 
 If queue_length is specified, then messages are placed into the queue before
 being sent. Messages are sent from the head of the queue. If the queue gets

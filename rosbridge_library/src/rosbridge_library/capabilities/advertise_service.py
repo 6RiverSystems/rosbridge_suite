@@ -1,88 +1,90 @@
 import fnmatch
-from threading import Lock
-import time
 
-from rosbridge_library.internal.ros_loader import get_service_class
-from rosbridge_library.internal import message_conversion
+import rclpy
+from rclpy.callback_groups import ReentrantCallbackGroup
 from rosbridge_library.capability import Capability
-from rosbridge_library.util import string_types
+from rosbridge_library.internal import message_conversion
+from rosbridge_library.internal.ros_loader import get_service_class
 
-import rospy
 
-class AdvertisedServiceHandler():
+class AdvertisedServiceHandler:
 
     id_counter = 1
-    responses = {}
 
     def __init__(self, service_name, service_type, protocol):
-        self.active_requests = 0
-        self.shutdown_requested = False
-        self.lock = Lock()
+        self.request_futures = {}
         self.service_name = service_name
         self.service_type = service_type
         self.protocol = protocol
         # setup the service
-        self.service_handle = rospy.Service(service_name, get_service_class(service_type), self.handle_request)
+        self.service_handle = protocol.node_handle.create_service(
+            get_service_class(service_type),
+            service_name,
+            self.handle_request,
+            callback_group=ReentrantCallbackGroup(),  # https://github.com/ros2/rclpy/issues/834#issuecomment-961331870
+        )
 
     def next_id(self):
         id = self.id_counter
         self.id_counter += 1
         return id
 
-    def handle_request(self, req):
-        with self.lock:
-            self.active_requests += 1
+    async def handle_request(self, req, res):
         # generate a unique ID
         request_id = "service_request:" + self.service_name + ":" + str(self.next_id())
+
+        future = rclpy.task.Future()
+        self.request_futures[request_id] = future
 
         # build a request to send to the external client
         request_message = {
             "op": "call_service",
             "id": request_id,
             "service": self.service_name,
-            "args": message_conversion.extract_values(req)
+            "args": message_conversion.extract_values(req),
         }
         self.protocol.send(request_message)
 
-        # wait for a response
-        while request_id not in self.responses.keys():
-            with self.lock:
-                if self.shutdown_requested:
-                    break
-            time.sleep(0)
+        try:
+            return await future
+        finally:
+            del self.request_futures[request_id]
 
-        with self.lock:
-            self.active_requests -= 1
+    def handle_response(self, request_id, res):
+        """
+        Called by the ServiceResponse capability to handle a service response from the external client.
+        """
+        if request_id in self.request_futures:
+            self.request_futures[request_id].set_result(res)
+        else:
+            self.protocol.log(
+                "warning", f"Received service response for unrecognized id: {request_id}"
+            )
 
-            if self.shutdown_requested:
-                self.protocol.log(
-                    "warning",
-                    "Service %s was unadvertised with a service call in progress, "
-                    "aborting service call with request ID %s" % (self.service_name, request_id))
-                return None
-
-        resp = self.responses[request_id]
-        del self.responses[request_id]
-        return resp
-
-    def graceful_shutdown(self, timeout):
+    def graceful_shutdown(self):
         """
         Signal the AdvertisedServiceHandler to shutdown
 
-        Using this, rather than just rospy.Service.shutdown(), allows us
+        Using this, rather than just node_handle.destroy_service, allows us
         time to stop any active service requests, ending their busy wait
         loops.
         """
-        with self.lock:
-            self.shutdown_requested = True
-        start_time = time.clock()
-        while time.clock() - start_time < timeout:
-            time.sleep(0)
+        if self.request_futures:
+            incomplete_ids = ", ".join(self.request_futures.keys())
+            self.protocol.log(
+                "warning",
+                f"Service {self.service_name} was unadvertised with a service call in progress, "
+                f"aborting service calls with request IDs {incomplete_ids}",
+            )
+            for future in self.request_futures.values():
+                future.set_exception(RuntimeError(f"Service {self.service_name} was unadvertised"))
+        self.protocol.node_handle.destroy_service(self.service_handle)
+
 
 class AdvertiseService(Capability):
     services_glob = None
 
-    advertise_service_msg_fields = [(True, "service", string_types), (True, "type", string_types)]
+    advertise_service_msg_fields = [(True, "service", str), (True, "type", str)]
 
     def __init__(self, protocol):
         # Call superclass constructor
@@ -99,23 +101,37 @@ class AdvertiseService(Capability):
         service_name = message["service"]
 
         if AdvertiseService.services_glob is not None and AdvertiseService.services_glob:
-            self.protocol.log("debug", "Service security glob enabled, checking service: " + service_name)
+            self.protocol.log(
+                "debug",
+                "Service security glob enabled, checking service: " + service_name,
+            )
             match = False
             for glob in AdvertiseService.services_glob:
-                if (fnmatch.fnmatch(service_name, glob)):
-                    self.protocol.log("debug", "Found match with glob " + glob + ", continuing service advertisement...")
+                if fnmatch.fnmatch(service_name, glob):
+                    self.protocol.log(
+                        "debug",
+                        "Found match with glob " + glob + ", continuing service advertisement...",
+                    )
                     match = True
                     break
             if not match:
-                self.protocol.log("warn", "No match found for service, cancelling service advertisement for: " + service_name)
+                self.protocol.log(
+                    "warn",
+                    "No match found for service, cancelling service advertisement for: "
+                    + service_name,
+                )
                 return
         else:
-            self.protocol.log("debug", "No service security glob, not checking service advertisement.")
+            self.protocol.log(
+                "debug", "No service security glob, not checking service advertisement."
+            )
 
         # check for an existing entry
         if service_name in self.protocol.external_service_list.keys():
-            self.protocol.log("warn", "Duplicate service advertised. Overwriting %s." % service_name)
-            self.protocol.external_service_list[service_name].service_handle.shutdown("Duplicate advertiser.")
+            self.protocol.log(
+                "warn", "Duplicate service advertised. Overwriting %s." % service_name
+            )
+            self.protocol.external_service_list[service_name].graceful_shutdown()
             del self.protocol.external_service_list[service_name]
 
         # setup and store the service information

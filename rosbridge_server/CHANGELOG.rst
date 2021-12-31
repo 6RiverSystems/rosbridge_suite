@@ -2,6 +2,157 @@
 Changelog for package rosbridge_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+1.1.1 (2021-12-09)
+------------------
+* Allow subscribing to any qos profile when creating a subscriber (`#690 <https://github.com/RobotWebTools/rosbridge_suite/issues/690>`_)
+* Fix and add test for multiple subscribers to same topic (`#687 <https://github.com/RobotWebTools/rosbridge_suite/issues/687>`_)
+* Delete unsupported TCP and UDP server implementations in ROS 2 branch (`#685 <https://github.com/RobotWebTools/rosbridge_suite/issues/685>`_)
+* Fix error when advertising duplicate service (`#683 <https://github.com/RobotWebTools/rosbridge_suite/issues/683>`_)
+* Fix incoming service calls (`#669 <https://github.com/RobotWebTools/rosbridge_suite/issues/669>`_)
+* Replace busy wait in AdvertiseService with async handler (`#666 <https://github.com/RobotWebTools/rosbridge_suite/issues/666>`_)
+* Refactor smoke test to make WebSocket test harness reusable (`#675 <https://github.com/RobotWebTools/rosbridge_suite/issues/675>`_)
+* Contributors: Domenic Rodriguez, Jacob Bandes-Storch, Roman Shtylman
+
+1.1.0 (2021-10-22)
+------------------
+* Exit cleanly on SIGINT; remove sleep in test (`#667 <https://github.com/RobotWebTools/rosbridge_suite/issues/667>`_)
+* Fix unused variables: flake8 --select=F841 (`#623 <https://github.com/RobotWebTools/rosbridge_suite/issues/623>`_)
+* Fix undefined name in rosbridge_websocket (`#659 <https://github.com/RobotWebTools/rosbridge_suite/issues/659>`_)
+* Port `#464 <https://github.com/RobotWebTools/rosbridge_suite/issues/464>`_, `#478 <https://github.com/RobotWebTools/rosbridge_suite/issues/478>`_, `#496 <https://github.com/RobotWebTools/rosbridge_suite/issues/496>`_, and `#502 <https://github.com/RobotWebTools/rosbridge_suite/issues/502>`_ from ROS1 branch (`#663 <https://github.com/RobotWebTools/rosbridge_suite/issues/663>`_)
+* Add pre-commit, format with black and isort (`#648 <https://github.com/RobotWebTools/rosbridge_suite/issues/648>`_)
+* Contributors: Adrian Macneil, Christian Clauss, Domenic Rodriguez, Jacob Bandes-Storch, Kenji Miyake
+
+1.0.8 (2021-08-26)
+------------------
+* Add missing test_depends and buildtool_depends
+* Fix various Python code style and lint issues
+* Contributors: Christian Clauss, Jacob Bandes-Storch
+
+1.0.7 (2021-08-18)
+------------------
+* Fix typos discovered by codespell (`#600 <https://github.com/RobotWebTools/rosbridge_suite/issues/600>`_)
+* Contributors: Christian Clauss
+
+1.0.6 (2021-08-17)
+------------------
+* Fix broken links in changelogs
+* Contributors: Jacob Bandes-Storch
+
+1.0.5 (2021-08-12)
+------------------
+* Fix globs in launch xml for ROS 2 pre-Galactic (`#589 <https://github.com/RobotWebTools/rosbridge_suite/issues/589>`_)
+* Remove authentication features and rosauth dependency (`#586 <https://github.com/RobotWebTools/rosbridge_suite/issues/586>`_)
+  [rosauth](http://wiki.ros.org/rosauth) is not maintained for ROS 2, and has not been released for Galactic (https://github.com/GT-RAIL/rosauth/issues/35). Since the authentication feature is old and not commonly used, and since rosbridge_suite has not yet been released in Eloquent, Foxy, or Galactic, we decided to just remove the authentication features to unblock us from pushing releases.
+  To avoid breaking backwards compatibility, we will not publish the new version of rosbridge_suite for Dashing.
+* The server now allows choosing `port:=0` to select an ephemeral port, and sets the port number in the `actual_port` ROS param. (`#585 <https://github.com/RobotWebTools/rosbridge_suite/issues/585>`_)
+* Contributors: Jacob Bandes-Storch
+
+1.0.4 (2021-08-11)
+------------------
+
+1.0.3 (2021-08-03)
+------------------
+* Add cbor-raw compression support (`#574 <https://github.com/RobotWebTools/rosbridge_suite/issues/574>`_, adapted from ROS 1 implementation `#452 <https://github.com/RobotWebTools/rosbridge_suite/issues/452>`_)
+* Adaptations to Eloquent [Again] (`#533 <https://github.com/RobotWebTools/rosbridge_suite/issues/533>`_)
+  * increase spin period to 1000Hz to allow 1000 messages per second into the websocket
+  * allow interpreting int as float when needed
+  * better handling array.array and numpy arrays
+  * allow bytes and str websocket messages
+  * add boolean type
+  * handle type extraction of static array rostypes
+  * missing cls variable
+  Co-authored-by: Maximilian Matthe <maxi.matthe@googlemail.com>
+  Co-authored-by: CoRoLa generic <corola@bi>
+  Co-authored-by: joshwapohlmann <joshwa.pohlmann@barkhauseninstitut.org>
+* Contributors: Jacob Bandes-Storch, travipross
+
+1.0.2 (2019-09-24)
+------------------
+* use Python 3 dependency keys (`#436 <https://github.com/RobotWebTools/rosbridge_suite/issues/436>`_)
+
+1.0.1 (2019-09-20)
+------------------
+
+1.0.0 (2019-09-19)
+------------------
+* Port to ROS 2
+
+0.11.3 (2019-08-07)
+-------------------
+* Fixes `#418 <https://github.com/RobotWebTools/rosbridge_suite/issues/418>`_: WebSocketClosedError Spam (`#423 <https://github.com/RobotWebTools/rosbridge_suite/issues/423>`_)
+  * not raising WebSocketClosedError for old tornado versions
+* Contributors: lennartdopatka
+
+0.11.2 (2019-07-08)
+-------------------
+* yield infinite lock (`#413 <https://github.com/RobotWebTools/rosbridge_suite/issues/413>`_)
+* Add settings for websocket timeout (`#410 <https://github.com/RobotWebTools/rosbridge_suite/issues/410>`_)
+  * Add settings for websocket timeout
+  * Error handling of StreamClosedError
+* Contributors: Aurélien Labate
+
+0.11.1 (2019-05-08)
+-------------------
+
+0.11.0 (2019-03-29)
+-------------------
+* Additional client information websocket (`#393 <https://github.com/RobotWebTools/rosbridge_suite/issues/393>`_)
+  * Add package rosbridge_msgs.
+  * rosbridge_server: Publish additional information about connected clients.
+  * rosbridge_server: Make ClientManager's add_client/remove_client methods thread safe.
+  * rosbridge_server: Rm unnecessary publishing.
+  * rosbridge_msgs: Cleanup/fix dependencies.
+* Handle BadYieldError in Tornado <4.5.0 (`#395 <https://github.com/RobotWebTools/rosbridge_suite/issues/395>`_)
+* Contributors: Hans-Joachim Krauch, Matt Vollrath
+
+0.10.2 (2019-03-04)
+-------------------
+* Log Tornado handler exceptions (`#386 <https://github.com/RobotWebTools/rosbridge_suite/issues/386>`_)
+  * Decorate most handlers which were previously failing silently.
+  * Use a try block in the @coroutine, it refused double decoration.
+  * Always raise after logging, so Tornado sees the Exception too.
+  * Only warn when racing to write to a closed WebSocket.
+* Synchronous websocket write (`#385 <https://github.com/RobotWebTools/rosbridge_suite/issues/385>`_)
+  Fixes `#212 <https://github.com/RobotWebTools/rosbridge_suite/issues/212>`_
+* Contributors: Matt Vollrath
+
+0.10.1 (2018-12-16)
+-------------------
+
+0.10.0 (2018-12-14)
+-------------------
+* CBOR encoding (`#364 <https://github.com/RobotWebTools/rosbridge_suite/issues/364>`_)
+  * Add CBOR encoding
+  * Fix value extraction performance regression
+  Extract message values once per message.
+  * Fix typed array tags
+  Was using big-endian tags and encoding little-endian.
+  Always use little-endian for now since Intel is prevalent for desktop.
+  Add some comments to this effect.
+  * Update CBOR protocol documentation
+  More information about draft typed arrays and when to use CBOR.
+  * Fix 64-bit integer CBOR packing
+  Use an actual 64-bit format.
+* Add param to enable ws per-message deflate (`#365 <https://github.com/RobotWebTools/rosbridge_suite/issues/365>`_)
+  * Add param to enable ws per-message deflate
+  Tornado has its own per-message deflate compression option, which
+  compresses each WebSocket message.  The compression level should be
+  roughly equivalent to PNG compression, depending on whether the message is
+  JSON or binary (CBOR).  The encoding/decoding time will be much faster
+  than protocol PNG compression.
+  This param should be enabled when wire size is important, e.g. not
+  connecting to localhost.
+* rosbridge_server: Publish number of connected clients on latched topic. (`#359 <https://github.com/RobotWebTools/rosbridge_suite/issues/359>`_)
+* Fix a few problems (`#350 <https://github.com/RobotWebTools/rosbridge_suite/issues/350>`_)
+  * xrange is not available in Python3, range works for both Python versions
+  * the variable v is undefined in search_param, comparing the implementation with the sibling functions I expect name to be the intended variable
+  * The module udp_handler is using the Authentication service but wasn't importing the module
+* use package format 2, remove unnecessary dependencies (`#348 <https://github.com/RobotWebTools/rosbridge_suite/issues/348>`_)
+* Adding bson support for websockets (`#327 <https://github.com/RobotWebTools/rosbridge_suite/issues/327>`_)
+  * removed message that bson isn't supported. setting the bson only mode class attribute
+  * added auth package inspection for bson only mode
+* Contributors: Dirk Thomas, Hans-Joachim Krauch, Matt Vollrath, Sanic
+
 0.9.0 (2018-04-09)
 ------------------
 * Make unregister_timeout configurable (`#322 <https://github.com/RobotWebTools/rosbridge_suite/issues/322>`_)
@@ -79,7 +230,7 @@ Changelog for package rosbridge_server
   also accept empty list as the default "do not check globs" value in addition to None.
   Finally, append rosapi service glob after processing command line input so it's not overwritten
 * add missing imports and correct default values for glob parameters
-* Added services_glob to CallServices, added globs to rosbridge_tcp and rosbridge_udp, and other miscellanous fixes.
+* Added services_glob to CallServices, added globs to rosbridge_tcp and rosbridge_udp, and other miscellaneous fixes.
 * Two minor fixes.
 * Added new parameters for topic and service security.
   Added 3 new parameters to rosapi and rosbridge_server which filter the
@@ -185,7 +336,7 @@ Changelog for package rosbridge_server
 * update changelog
 * Merge pull request #147 from RobotWebTools/migrate_third_parties
   separate tornado and backports from rosbridge_server
-* seprate out third party library and ros related script
+* separate out third party library and ros related script
 * remove setup.py
 * add rosbridge_tools as rosbridge_server dependency
 * remove python-imaging dependency. it is used in rosbridge_library
@@ -216,7 +367,7 @@ Changelog for package rosbridge_server
 * update changelog
 * Merge pull request #147 from RobotWebTools/migrate_third_parties
   separate tornado and backports from rosbridge_server
-* seprate out third party library and ros related script
+* separate out third party library and ros related script
 * remove setup.py
 * add rosbridge_tools as rosbridge_server dependency
 * remove python-imaging dependency. it is used in rosbridge_library
@@ -226,7 +377,7 @@ Changelog for package rosbridge_server
 ------------------
 * Merge pull request `#147 <https://github.com/RobotWebTools/rosbridge_suite/issues/147>`_ from RobotWebTools/migrate_third_parties
   separate tornado and backports from rosbridge_server
-* seprate out third party library and ros related script
+* separate out third party library and ros related script
 * remove setup.py
 * add rosbridge_tools as rosbridge_server dependency
 * remove python-imaging dependency. it is used in rosbridge_library
@@ -301,7 +452,7 @@ Changelog for package rosbridge_server
 * move global param into local param to address issue `#25 <https://github.com/RobotWebTools/rosbridge_suite/issues/25>`_
 * moving global parameter into local parameter to address issue `#25 <https://github.com/RobotWebTools/rosbridge_suite/issues/25>`_
 * merging changes of groovy-devel into hydro-devel
-* Specific IP adress binding using roslauch
+* Specific IP address binding using roslauch
 * added parameter lookup to rosbridge_tcp.py, modules where those are used, and default parameters to launch file; internal default-values still get used when launch-file does not provide them; internal defaults can be changed within rosbridge_tcp.py
 * increaing max_msg_length - still hardcoded
 * preparing pull request for upstream..
@@ -381,7 +532,7 @@ Changelog for package rosbridge_server
   [ERROR] [WallTime: 1356115083.100585] Uncaught exception, closing connection.
   [ERROR] [WallTime: 1356115083.100900] Exception in callback <tornado.stack_context._StackContextWrapper object at 0x1dd6e10>
 * Removing ultrajson from rosbridge.
-  If JSON parsing becomes a performance bottle neck, we can readd it.
+  If JSON parsing becomes a performance bottle neck, we can re-add it.
 * Refactors rosbridge_server. Adds scripts dir.
 * Catkinizing rosbridge_library and server.
 * Added command line --port argument.

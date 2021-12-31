@@ -30,24 +30,34 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import print_function
-from rosbridge_library.protocol import Protocol
-from rosbridge_library.capabilities.call_service import CallService
 from rosbridge_library.capabilities.advertise import Advertise
-from rosbridge_library.capabilities.publish import Publish
-from rosbridge_library.capabilities.subscribe import Subscribe
-# imports for defragmentation
-from rosbridge_library.capabilities.defragmentation import Defragment
+
 # imports for external service_server
 from rosbridge_library.capabilities.advertise_service import AdvertiseService
-from rosbridge_library.capabilities.service_response import ServiceResponse
-from rosbridge_library.capabilities.unadvertise_service import UnadvertiseService
+from rosbridge_library.capabilities.call_service import CallService
 
+# imports for defragmentation
+from rosbridge_library.capabilities.defragmentation import Defragment
+from rosbridge_library.capabilities.publish import Publish
+from rosbridge_library.capabilities.service_response import ServiceResponse
+from rosbridge_library.capabilities.subscribe import Subscribe
+from rosbridge_library.capabilities.unadvertise_service import UnadvertiseService
+from rosbridge_library.protocol import Protocol
 
 
 class RosbridgeProtocol(Protocol):
-    """ Adds the handlers for the rosbridge opcodes """
-    rosbridge_capabilities = [CallService, Advertise, Publish, Subscribe, Defragment, AdvertiseService, ServiceResponse, UnadvertiseService]
+    """Adds the handlers for the rosbridge opcodes"""
+
+    rosbridge_capabilities = [
+        CallService,
+        Advertise,
+        Publish,
+        Subscribe,
+        Defragment,
+        AdvertiseService,
+        ServiceResponse,
+        UnadvertiseService,
+    ]
 
     print("registered capabilities (classes):")
     for cap in rosbridge_capabilities:
@@ -55,8 +65,8 @@ class RosbridgeProtocol(Protocol):
 
     parameters = None
 
-    def __init__(self, client_id, parameters = None):
+    def __init__(self, client_id, node_handle, parameters=None):
         self.parameters = parameters
-        Protocol.__init__(self, client_id)
+        Protocol.__init__(self, client_id, node_handle)
         for capability_class in self.rosbridge_capabilities:
             self.add_capability(capability_class)

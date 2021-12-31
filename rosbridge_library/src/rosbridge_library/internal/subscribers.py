@@ -32,29 +32,37 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from threading import Lock
-from rospy import Subscriber, logerr
-from rostopic import get_topic_type
-from rosbridge_library.internal import ros_loader, message_conversion
-from rosbridge_library.internal.topics import TopicNotEstablishedException
-from rosbridge_library.internal.topics import TypeConflictException
+
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
+from rosbridge_library.internal import ros_loader
+from rosbridge_library.internal.message_conversion import msg_class_type_repr
+from rosbridge_library.internal.outgoing_message import OutgoingMessage
+from rosbridge_library.internal.topics import (
+    TopicNotEstablishedException,
+    TypeConflictException,
+)
 
 """ Manages and interfaces with ROS Subscriber objects.  A single subscriber
 is shared between multiple clients
 """
 
 
-class MultiSubscriber():
-    """ Handles multiple clients for a single subscriber.
+class MultiSubscriber:
+    """Handles multiple clients for a single subscriber.
 
     Converts msgs to JSON before handing them to callbacks.  Due to subscriber
     callbacks being called in separate threads, must lock whenever modifying
-    or accessing the subscribed clients. """
+    or accessing the subscribed clients."""
 
-    def __init__(self, topic, msg_type=None):
-        """ Register a subscriber on the specified topic.
+    def __init__(self, topic, client_id, callback, node_handle, msg_type=None, raw=False):
+        """Register a subscriber on the specified topic.
 
         Keyword arguments:
         topic    -- the name of the topic to register the subscriber on
+        client_id -- the ID of the client subscribing
+        callback  -- this client's callback, that will be called for incoming
+        messages
+        node_handle -- Handle to a rclpy node to create the publisher.
         msg_type -- (optional) the type to register the subscriber as.  If not
         provided, an attempt will be made to infer the topic type
 
@@ -68,11 +76,18 @@ class MultiSubscriber():
 
         """
         # First check to see if the topic is already established
-        topic_type = get_topic_type(topic)[0]
+        topics_names_and_types = dict(node_handle.get_topic_names_and_types())
+        topic_type = topics_names_and_types.get(topic)
 
         # If it's not established and no type was specified, exception
         if msg_type is None and topic_type is None:
             raise TopicNotEstablishedException(topic)
+
+        # topic_type is a list of types or None at this point; only one type is supported.
+        if topic_type is not None:
+            if len(topic_type) > 1:
+                node_handle.get_logger().warning(f"More than one topic type detected: {topic_type}")
+            topic_type = topic_type[0]
 
         # Use the established topic type if none was specified
         if msg_type is None:
@@ -82,23 +97,50 @@ class MultiSubscriber():
         msg_class = ros_loader.get_message_class(msg_type)
 
         # Make sure the specified msg type and established msg type are same
-        if topic_type is not None and topic_type != msg_class._type:
-            raise TypeConflictException(topic, topic_type, msg_class._type)
+        msg_type_string = msg_class_type_repr(msg_class)
+        if topic_type is not None and topic_type != msg_type_string:
+            raise TypeConflictException(topic, topic_type, msg_type_string)
 
         # Create the subscriber and associated member variables
-        self.subscriptions = {}
+        # Subscriptions is initialized with the current client to start with.
+        self.subscriptions = {client_id: callback}
         self.lock = Lock()
         self.topic = topic
         self.msg_class = msg_class
-        self.subscriber = Subscriber(topic, msg_class, self.callback)
+        self.node_handle = node_handle
+
+        qos = QoSProfile(
+            depth=10,
+            durability=DurabilityPolicy.VOLATILE,
+            reliability=ReliabilityPolicy.RELIABLE,
+        )
+        infos = node_handle.get_publishers_info_by_topic(topic)
+
+        # Certain combinations of publisher and subscriber QoS parameters are
+        # incompatible. Here we make a "best effort" attempt to match existing
+        # publishers for the requested topic. This is not perfect because more
+        # publishers may come online after our subscriber is set up, but we try
+        # to provide sane defaults. For more information, see:
+        # - https://docs.ros.org/en/rolling/Concepts/About-Quality-of-Service-Settings.html
+        # - https://github.com/RobotWebTools/rosbridge_suite/issues/551
+        if any(pub.qos_profile.durability == DurabilityPolicy.TRANSIENT_LOCAL for pub in infos):
+            qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
+        if any(pub.qos_profile.reliability == ReliabilityPolicy.BEST_EFFORT for pub in infos):
+            qos.reliability = ReliabilityPolicy.BEST_EFFORT
+
+        self.subscriber = node_handle.create_subscription(
+            msg_class, topic, self.callback, qos, raw=raw
+        )
+        self.new_subscriber = None
+        self.new_subscriptions = {}
 
     def unregister(self):
-        self.subscriber.unregister()
+        self.node_handle.destroy_subscription(self.subscriber)
         with self.lock:
             self.subscriptions.clear()
 
     def verify_type(self, msg_type):
-        """ Verify that the subscriber subscribes to messages of this type.
+        """Verify that the subscriber subscribes to messages of this type.
 
         Keyword arguments:
         msg_type -- the type to check this subscriber against
@@ -110,12 +152,10 @@ class MultiSubscriber():
 
         """
         if not ros_loader.get_message_class(msg_type) is self.msg_class:
-            raise TypeConflictException(self.topic,
-                                        self.msg_class._type, msg_type)
-        return
+            raise TypeConflictException(self.topic, msg_class_type_repr(self.msg_class), msg_type)
 
     def subscribe(self, client_id, callback):
-        """ Subscribe the specified client to this subscriber.
+        """Subscribe the specified client to this subscriber.
 
         Keyword arguments:
         client_id -- the ID of the client subscribing
@@ -124,14 +164,18 @@ class MultiSubscriber():
 
         """
         with self.lock:
-            self.subscriptions[client_id] = callback
-            # If the topic is latched, add_callback will immediately invoke
+            # If the topic is latched, adding a new subscriber will immediately invoke
             # the given callback.
-            self.subscriber.impl.add_callback(self.callback, [callback])
-            self.subscriber.impl.remove_callback(self.callback, [callback])
+            # In any case, the first message is handled using new_sub_callback,
+            # which adds the new callback to the subscriptions dictionary.
+            self.new_subscriptions.update({client_id: callback})
+            if self.new_subscriber is None:
+                self.new_subscriber = self.node_handle.create_subscription(
+                    self.msg_class, self.topic, self._new_sub_callback, 10
+                )
 
     def unsubscribe(self, client_id):
-        """ Unsubscribe the specified client from this subscriber
+        """Unsubscribe the specified client from this subscriber
 
         Keyword arguments:
         client_id -- the ID of the client to unsubscribe
@@ -141,30 +185,22 @@ class MultiSubscriber():
             del self.subscriptions[client_id]
 
     def has_subscribers(self):
-        """ Return true if there are subscribers """
+        """Return true if there are subscribers"""
         with self.lock:
-            ret = len(self.subscriptions) != 0
-            return ret
+            return len(self.subscriptions) != 0
 
     def callback(self, msg, callbacks=None):
-        """ Callback for incoming messages on the rospy.Subscriber
+        """Callback for incoming messages on the rclpy subscription.
 
-        Converts the incoming msg to JSON, then passes the JSON to the
-        registered subscriber callbacks.
+        Passes the message to registered subscriber callbacks.
 
         Keyword Arguments:
         msg - the ROS message coming from the subscriber
         callbacks - subscriber callbacks to invoke
 
         """
-        # Try to convert the msg to JSON
-        json = None
-        try:
-            json = message_conversion.extract_values(msg)
-        except Exception as exc:
-            logerr("Exception while converting messages in subscriber callback : %s", exc)
-            return
-        
+        outgoing = OutgoingMessage(msg)
+
         # Get the callbacks to call
         if not callbacks:
             with self.lock:
@@ -173,23 +209,41 @@ class MultiSubscriber():
         # Pass the JSON to each of the callbacks
         for callback in callbacks:
             try:
-                callback(json)
+                callback(outgoing)
             except Exception as exc:
                 # Do nothing if one particular callback fails except log it
-                logerr("Exception calling subscribe callback: %s", exc)
-                pass
+                self.node_handle.get_logger().error(f"Exception calling subscribe callback: {exc}")
+
+    def _new_sub_callback(self, msg):
+        """
+        Callbacks for new subscribers.
+
+        If the topic was latched, a new subscriber has to be added to receive
+        a new message and route it to the new subscriptor.
+
+        After the first message is routed, the new subscriber is deleted and
+        the subscriptions dictionary is updated with the newly incorporated
+        subscriptors.
+        """
+        with self.lock:
+            self.callback(msg, self.new_subscriptions.values())
+            self.subscriptions.update(self.new_subscriptions)
+            self.new_subscriptions = {}
+            self.node_handle.destroy_subscription(self.new_subscriber)
+            self.new_subscriber = None
 
 
-class SubscriberManager():
+class SubscriberManager:
     """
     Keeps track of client subscriptions
     """
 
     def __init__(self):
+        self._lock = Lock()
         self._subscribers = {}
 
-    def subscribe(self, client_id, topic, callback, msg_type=None):
-        """ Subscribe to a topic
+    def subscribe(self, client_id, topic, callback, node_handle, msg_type=None, raw=False):
+        """Subscribe to a topic
 
         Keyword arguments:
         client_id -- the ID of the client making this subscribe request
@@ -198,31 +252,34 @@ class SubscriberManager():
         msg_type  -- (optional) the type of the topic
 
         """
-        if not topic in self._subscribers:
-            self._subscribers[topic] = MultiSubscriber(topic, msg_type)
+        with self._lock:
+            if topic not in self._subscribers:
+                self._subscribers[topic] = MultiSubscriber(
+                    topic, client_id, callback, node_handle, msg_type=msg_type, raw=raw
+                )
+            else:
+                self._subscribers[topic].subscribe(client_id, callback)
 
-        if msg_type is not None:
-            self._subscribers[topic].verify_type(msg_type)
-
-        self._subscribers[topic].subscribe(client_id, callback)
+            if msg_type is not None and not raw:
+                self._subscribers[topic].verify_type(msg_type)
 
     def unsubscribe(self, client_id, topic):
-        """ Unsubscribe from a topic
+        """Unsubscribe from a topic
 
         Keyword arguments:
         client_id -- the ID of the client to unsubscribe
         topic     -- the topic to unsubscribe from
 
         """
-        if not topic in self._subscribers:
-            return
+        with self._lock:
+            if topic not in self._subscribers:
+                return
 
-        self._subscribers[topic].unsubscribe(client_id)
+            self._subscribers[topic].unsubscribe(client_id)
 
-        if not self._subscribers[topic].has_subscribers():
-            self._subscribers[topic].unregister()
-            del self._subscribers[topic]
+            if not self._subscribers[topic].has_subscribers():
+                self._subscribers[topic].unregister()
+                del self._subscribers[topic]
 
 
 manager = SubscriberManager()
-

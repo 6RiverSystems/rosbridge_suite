@@ -2,6 +2,108 @@
 Changelog for package rosapi
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+1.1.1 (2021-12-09)
+------------------
+
+1.1.0 (2021-10-22)
+------------------
+* Move msg/srv from rosapi and rosbridge_library into separate packages; enable Rolling in CI (`#665 <https://github.com/RobotWebTools/rosbridge_suite/issues/665>`_)
+* Exit cleanly on SIGINT; remove sleep in test (`#667 <https://github.com/RobotWebTools/rosbridge_suite/issues/667>`_)
+* Remove unused service_host and search_param services (`#660 <https://github.com/RobotWebTools/rosbridge_suite/issues/660>`_)
+* Migrate remaining linters to pre-commit (`#657 <https://github.com/RobotWebTools/rosbridge_suite/issues/657>`_)
+* Add pre-commit, format with black and isort (`#648 <https://github.com/RobotWebTools/rosbridge_suite/issues/648>`_)
+* Contributors: Adrian Macneil, Jacob Bandes-Storch, Kenji Miyake
+
+1.0.8 (2021-08-26)
+------------------
+* Add missing test_depends and buildtool_depends (`#617 <https://github.com/RobotWebTools/rosbridge_suite/issues/617>`_)
+* Fix various Python code style and lint issues
+* Contributors: Christian Clauss, Jacob Bandes-Storch
+
+1.0.7 (2021-08-18)
+------------------
+* Load message definitions from .msg files; exclude /msg/ and include builtin_interfaces in combined definitions (`#597 <https://github.com/RobotWebTools/rosbridge_suite/issues/597>`_)
+* Fix typos discovered by codespell (`#600 <https://github.com/RobotWebTools/rosbridge_suite/issues/600>`_)
+* Contributors: Christian Clauss, Jacob Bandes-Storch
+
+1.0.6 (2021-08-17)
+------------------
+* Include /msg/ in type names (`#591 <https://github.com/RobotWebTools/rosbridge_suite/issues/591>`_)
+* Fix broken links in changelogs
+* Contributors: Jacob Bandes-Storch
+
+1.0.5 (2021-08-12)
+------------------
+
+1.0.4 (2021-08-11)
+------------------
+* Include /msg/ in type names (`#584 <https://github.com/RobotWebTools/rosbridge_suite/issues/584>`_)
+  It's more canonical for ROS 2 type names to be of the form `foo_msgs/msg/Bar` rather than just `foo_msgs/Bar`. This is occasionally reflected in documentation and command line tooling: https://docs.ros.org/en/galactic/Tutorials/Topics/Understanding-ROS2-Topics.html#ros2-interface-show
+  So rather than stripping out `/msg/`, we include it in the type definitions.
+  See also: https://github.com/RobotWebTools/rosmsg/pull/12
+* Contributors: Jacob Bandes-Storch
+
+1.0.3 (2021-08-03)
+------------------
+* Add TopicsAndRawTypes service (`#574 <https://github.com/RobotWebTools/rosbridge_suite/issues/574>`_, adapted from ROS 1 implementation `#452 <https://github.com/RobotWebTools/rosbridge_suite/issues/452>`_)
+* fix: remove json encoding before setting string params (`#521 <https://github.com/RobotWebTools/rosbridge_suite/issues/521>`_)
+* Update rosapi/proxy.py to match eloquent API (`#447 <https://github.com/RobotWebTools/rosbridge_suite/issues/447>`_)
+* Contributors: Jacob Bandes-Storch, justinscorringe, travipross
+
+1.0.2 (2019-09-24)
+------------------
+
+1.0.1 (2019-09-20)
+------------------
+* fix missing dependency
+
+1.0.0 (2019-09-19)
+------------------
+* Port to ROS 2
+
+0.11.3 (2019-08-07)
+-------------------
+* Travis CI: Look for Python syntax errors and undefined name (`#420 <https://github.com/RobotWebTools/rosbridge_suite/issues/420>`_)
+  * Travis CI: Look for Python syntax errors and undefined name
+  _It would be prudent to start running the tests in both 2 and 3._  https://github.com/RobotWebTools/rosbridge_suite/issues/401#issuecomment-512069249
+  * Add names to protect the guilty
+  * Five jobs, not six
+  * Identity is not the same thing as equality in Python
+  * Flake8 tests now pass on Python 2
+* Contributors: cclauss
+
+0.11.2 (2019-07-08)
+-------------------
+* constnames and constvalues in typedef (`#412 <https://github.com/RobotWebTools/rosbridge_suite/issues/412>`_)
+* Contributors: Kad91
+
+0.11.1 (2019-05-08)
+-------------------
+
+0.11.0 (2019-03-29)
+-------------------
+
+0.10.2 (2019-03-04)
+-------------------
+* Use Master.getTopicTypes() in /rosapi/topics to increase performance (`#381 <https://github.com/RobotWebTools/rosbridge_suite/issues/381>`_)
+* Contributors: Affonso, Guilherme
+
+0.10.1 (2018-12-16)
+-------------------
+
+0.10.0 (2018-12-14)
+-------------------
+* Drop use of ros Python module (`#374 <https://github.com/RobotWebTools/rosbridge_suite/issues/374>`_)
+* Fixes passing of globs to proxy (`#355 <https://github.com/RobotWebTools/rosbridge_suite/issues/355>`_)
+  * Fixes handling and passing of globs to proxy
+  * Removes some confusing imports
+* Fix a few problems (`#350 <https://github.com/RobotWebTools/rosbridge_suite/issues/350>`_)
+  * xrange is not available in Python3, range works for both Python versions
+  * the variable v is undefined in search_param, comparing the implementation with the sibling functions I expect name to be the intended variable
+  * The module udp_handler is using the Authentication service but wasn't importing the module
+* use package format 2, remove unnecessary dependencies (`#348 <https://github.com/RobotWebTools/rosbridge_suite/issues/348>`_)
+* Contributors: Anwar, Dirk Thomas, Jochen Sprickerhof
+
 0.9.0 (2018-04-09)
 ------------------
 
@@ -66,7 +168,7 @@ Changelog for package rosapi
 * correct default values for security globs
   also accept empty list as the default "do not check globs" value in addition to None.
   Finally, append rosapi service glob after processing command line input so it's not overwritten
-* Added services_glob to CallServices, added globs to rosbridge_tcp and rosbridge_udp, and other miscellanous fixes.
+* Added services_glob to CallServices, added globs to rosbridge_tcp and rosbridge_udp, and other miscellaneous fixes.
 * As per the suggestions of @T045T, fixed several typos, improved logging, and made some style fixes.
 * Fixed time object field definitions to match documentation.
 * Two minor fixes.

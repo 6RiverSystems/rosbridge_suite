@@ -1,26 +1,31 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(rosbridge_server)
 
-find_package(catkin REQUIRED)
+find_package(ament_cmake_ros REQUIRED)
+find_package(ament_cmake_core REQUIRED)
+find_package(ament_cmake_python REQUIRED)
 
-catkin_python_setup()
+ament_python_install_package(
+  ${PROJECT_NAME} PACKAGE_DIR "src/${PROJECT_NAME}")
 
-catkin_package()
+ament_package()
 
 install(PROGRAMS
   scripts/rosbridge_websocket.py
   scripts/rosbridge_websocket
-  scripts/rosbridge_tcp.py
-  scripts/rosbridge_tcp
-  scripts/rosbridge_udp
-  scripts/rosbridge_udp.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 install(FILES
-  launch/rosbridge_websocket.launch
-  launch/rosbridge_tcp.launch
-  launch/rosbridge_udp.launch
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+  launch/rosbridge_websocket_launch.xml
+  DESTINATION share/${PROJECT_NAME}/launch
 )
 
+if(BUILD_TESTING)
+  find_package(launch_testing_ament_cmake REQUIRED)
+  add_launch_test(test/websocket/advertise_service.test.py)
+  add_launch_test(test/websocket/call_service.test.py)
+  add_launch_test(test/websocket/smoke.test.py)
+  add_launch_test(test/websocket/transient_local_publisher.test.py)
+  add_launch_test(test/websocket/best_effort_publisher.test.py)
+endif()

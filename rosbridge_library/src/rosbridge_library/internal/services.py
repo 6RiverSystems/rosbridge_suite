@@ -31,12 +31,16 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from threading import Thread
-from rospy import ServiceProxy, resolve_name
-from rosservice import get_service_type
-from rosbridge_library.internal.ros_loader import get_service_class
-from rosbridge_library.internal.ros_loader import get_service_request_instance
-from rosbridge_library.internal.message_conversion import populate_instance
-from rosbridge_library.internal.message_conversion import extract_values
+
+from rclpy.expand_topic_name import expand_topic_name
+from rosbridge_library.internal.message_conversion import (
+    extract_values,
+    populate_instance,
+)
+from rosbridge_library.internal.ros_loader import (
+    get_service_class,
+    get_service_request_instance,
+)
 
 
 class InvalidServiceException(Exception):
@@ -45,9 +49,8 @@ class InvalidServiceException(Exception):
 
 
 class ServiceCaller(Thread):
-
-    def __init__(self, service, args, success_callback, error_callback):
-        """ Create a service caller for the specified service.  Use start()
+    def __init__(self, service, args, success_callback, error_callback, node_handle):
+        """Create a service caller for the specified service.  Use start()
         to start in a separate thread or run() to run in this thread.
 
         Keyword arguments:
@@ -60,33 +63,34 @@ class ServiceCaller(Thread):
         service call
         error_callback   -- a callback to call if an error occurs.  The
         callback will be passed the exception that caused the failure
-
-         """
+        node_handle      -- a ROS2 node handle to call services.
+        """
         Thread.__init__(self)
         self.daemon = True
         self.service = service
         self.args = args
         self.success = success_callback
         self.error = error_callback
+        self.node_handle = node_handle
 
     def run(self):
         try:
             # Call the service and pass the result to the success handler
-            self.success(call_service(self.service, self.args))
+            self.success(call_service(self.node_handle, self.service, self.args))
         except Exception as e:
             # On error, just pass the exception to the error handler
             self.error(e)
 
 
 def args_to_service_request_instance(service, inst, args):
-    """ Populate a service request instance with the provided args
+    """Populate a service request instance with the provided args
 
     args can be a dictionary of values, or a list, or None
 
-    Propagates any exceptions that may be raised. """
+    Propagates any exceptions that may be raised."""
     msg = {}
     if isinstance(args, list):
-        msg = dict(zip(inst.__slots__, args))
+        msg = dict(zip(inst.get_fields_and_field_types().keys(), args))
     elif isinstance(args, dict):
         msg = args
 
@@ -94,26 +98,35 @@ def args_to_service_request_instance(service, inst, args):
     populate_instance(msg, inst)
 
 
-def call_service(service, args=None):
+def call_service(node_handle, service, args=None):
     # Given the service name, fetch the type and class of the service,
     # and a request instance
 
-    service = resolve_name(service)
+    # This should be equivalent to rospy.resolve_name.
+    service = expand_topic_name(service, node_handle.get_name(), node_handle.get_namespace())
 
-    service_type = get_service_type(str(service))
+    service_names_and_types = dict(node_handle.get_service_names_and_types())
+    service_type = service_names_and_types.get(service)
     if service_type is None:
         raise InvalidServiceException(service)
+    # service_type is a tuple of types at this point; only one type is supported.
+    if len(service_type) > 1:
+        node_handle.get_logger().warning(f"More than one service type detected: {service_type}")
+    service_type = service_type[0]
+
     service_class = get_service_class(service_type)
     inst = get_service_request_instance(service_type)
 
     # Populate the instance with the provided args
     args_to_service_request_instance(service, inst, args)
 
-    # Call the service
-    proxy = ServiceProxy(service, service_class)
-    response = proxy.call(inst)
+    client = node_handle.create_client(service_class, service)
 
-    # Turn the response into JSON and pass to the callback
-    json_response = extract_values(response)
+    result = client.call(inst)
+    if result is not None:
+        # Turn the response into JSON and pass to the callback
+        json_response = extract_values(result)
+    else:
+        raise Exception(result)
 
     return json_response

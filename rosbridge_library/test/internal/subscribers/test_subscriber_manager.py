@@ -1,20 +1,19 @@
 #!/usr/bin/env python
-import sys
-import rospy
-import rostest
 import unittest
-from rosgraph import Master
-
 from time import sleep
 
-from rosbridge_library.internal.subscribers import *
-from rosbridge_library.internal.topics import *
-from rosbridge_library.internal.message_conversion import FieldTypeMismatchException
-from std_msgs.msg import String, Int32
+import rospy
+import rostest
+from rosbridge_library.internal.subscribers import manager
+from rosbridge_library.internal.topics import (
+    TopicNotEstablishedException,
+    TypeConflictException,
+)
+from rosgraph import Master
+from std_msgs.msg import String
 
 
 class TestSubscriberManager(unittest.TestCase):
-
     def setUp(self):
         rospy.init_node("test_subscriber_manager")
 
@@ -25,7 +24,7 @@ class TestSubscriberManager(unittest.TestCase):
         return topicname in dict(Master("test_subscriber_manager").getSystemState()[1])
 
     def test_subscribe(self):
-        """ Register a publisher on a clean topic with a good msg type """
+        """Register a publisher on a clean topic with a good msg type"""
         topic = "/test_subscribe"
         msg_type = "std_msgs/String"
         client = "client_test_subscribe"
@@ -73,7 +72,14 @@ class TestSubscriberManager(unittest.TestCase):
         self.assertTrue(topic in manager._subscribers)
         self.assertTrue(self.is_topic_subscribed(topic))
 
-        self.assertRaises(TypeConflictException, manager.subscribe, "client2", topic, None, msg_type_bad)
+        self.assertRaises(
+            TypeConflictException,
+            manager.subscribe,
+            "client2",
+            topic,
+            None,
+            msg_type_bad,
+        )
 
     def test_register_multiple_publishers(self):
         topic1 = "/test_register_multiple_publishers1"
@@ -175,7 +181,7 @@ class TestSubscriberManager(unittest.TestCase):
         received = {"msg": None}
 
         def cb(msg):
-            received["msg"] = msg
+            received["msg"] = msg.get_json_values()
 
         manager.subscribe(client, topic, cb, msg_type)
         sleep(0.5)
@@ -184,8 +190,7 @@ class TestSubscriberManager(unittest.TestCase):
         self.assertEqual(msg.data, received["msg"]["data"])
 
 
-PKG = 'rosbridge_library'
-NAME = 'test_subscriber_manager'
-if __name__ == '__main__':
+PKG = "rosbridge_library"
+NAME = "test_subscriber_manager"
+if __name__ == "__main__":
     rostest.unitrun(PKG, NAME, TestSubscriberManager)
-
